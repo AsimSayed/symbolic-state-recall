@@ -1,0 +1,16 @@
+# Compiled binaries
+cli_harness
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+
+# Build artifacts
+build/
+*.o
+*.swp

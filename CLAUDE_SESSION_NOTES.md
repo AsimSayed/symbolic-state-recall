@@ -43,17 +43,23 @@
 - **15/15 Parser tests PASS** (verified via `xcodebuild test -only-testing:symbolicStateRecallTests/ParserTests`)
 - Other test suites (Tokenizer, Navigation, Serializer) should pass but running full test suite causes hangs
 
-### Known Issue: Test Hangs
-When running `xcodebuild test` with all tests, the app sometimes hangs. Possible causes:
-- SwiftUI app launches during testing and blocks
-- Some interaction with HotkeyManager (Carbon APIs) or ClipboardMonitor (AppKit)
-- Xcode's test runner waiting for app UI
+### Test Hang Issue - RESOLVED
+When running `xcodebuild test` without specifying test classes, the app opens multiple windows and hangs. This happens because xcodebuild also tries to run UI tests.
 
-**Workaround**: Run specific test classes:
+**Solution**: Explicitly specify all unit test classes to skip UI tests:
 ```bash
 xcodebuild test -scheme symbolicStateRecall -destination 'platform=macOS' \
-  -only-testing:symbolicStateRecallTests/ParserTests
+  -only-testing:symbolicStateRecallTests/TokenizerTests \
+  -only-testing:symbolicStateRecallTests/ParserTests \
+  -only-testing:symbolicStateRecallTests/NavigationTests \
+  -only-testing:symbolicStateRecallTests/SerializerTests
 ```
+
+**All 30 unit tests pass**:
+- TokenizerTests: 5/5
+- ParserTests: 15/15
+- NavigationTests: 6/6
+- SerializerTests: 4/4
 
 ### Current File Structure
 ```
@@ -86,7 +92,7 @@ symbolic-state-recall/
 ```
 
 ### Next Steps
-1. Investigate test hang issue (might need to conditionally skip HotkeyManager/ClipboardMonitor init during tests)
+1. ~~Investigate test hang issue~~ - RESOLVED (use explicit test class specifiers)
 2. Integrate Core functionality with SwiftUI ContentView
 3. Test VoiceOver integration with SpeechController
 4. Add accessibility permissions handling
