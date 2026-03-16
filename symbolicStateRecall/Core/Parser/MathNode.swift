@@ -1,5 +1,5 @@
 // MathNode.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Core AST node model for mathematical expressions.
 

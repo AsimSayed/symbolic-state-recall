@@ -1,5 +1,5 @@
 // MathSerializer.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Converts MathNode AST nodes back into plain text math notation
 // for insertion at the cursor.

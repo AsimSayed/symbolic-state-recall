@@ -1,5 +1,5 @@
 // Token.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Token types produced by the Tokenizer.
 

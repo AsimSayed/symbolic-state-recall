@@ -1,5 +1,5 @@
 // Tokenizer.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Converts plain text mathematical expressions into a stream of tokens.
 // Handles keywords (int, sqrt, lim, etc.), differentials (dx, dy),
@@ -207,6 +207,12 @@ class Tokenizer {
         // Multi-character non-keyword: split into individual variables
         // e.g., "xy" → variable "x", then rewind to handle "y" next
         if word.count > 1 {
+            // Special case: "d" followed by letters should be dKeyword
+            // This handles "dx" in "d/dx" being split correctly
+            if word.first == "d" {
+                position = wordStart + 1
+                return Token(type: .dKeyword, text: "d", position: startPos)
+            }
             // Return first character as variable, rewind rest
             position = wordStart + 1
             return Token(type: .variable, text: String(word.first!), position: startPos)

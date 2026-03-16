@@ -1,5 +1,5 @@
 // NavigationEngine.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Core navigation engine implementing recall mode, query resolution,
 // context stack, and node selection per the design specification.
@@ -8,7 +8,7 @@ import Foundation
 
 // MARK: - Interaction State
 
-enum RecallState {
+enum RecallState: Equatable {
     case idle               // Normal editing, recall not active
     case recallActive       // Recall mode entered, waiting for input
     case pathBuilding       // User is typing query tokens
@@ -19,7 +19,8 @@ enum RecallState {
 // MARK: - Recall Context
 
 /// Represents the current navigation context within the tree.
-struct RecallContext {
+/// Uses a class to allow recursive parent reference.
+class RecallContext {
     enum Mode {
         case top    // Line/side level
         case local  // Inside a structure (fraction, integral, etc.)
@@ -28,7 +29,14 @@ struct RecallContext {
     let mode: Mode
     let node: MathNode?         // Current parent node (nil at top level)
     let items: [MathNode]       // Available children at this level
-    let parentContext: RecallContext?  // For back navigation
+    weak var parentContext: RecallContext?  // For back navigation (weak to avoid retain cycles)
+
+    init(mode: Mode, node: MathNode?, items: [MathNode], parentContext: RecallContext?) {
+        self.mode = mode
+        self.node = node
+        self.items = items
+        self.parentContext = parentContext
+    }
 }
 
 // MARK: - Navigation Event

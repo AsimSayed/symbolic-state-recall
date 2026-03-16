@@ -1,5 +1,5 @@
 // SpeechController.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Handles speech output for the navigation engine.
 // In v1 prototype, prints to console. In production, posts

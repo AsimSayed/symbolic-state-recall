@@ -1,5 +1,5 @@
 // main.swift
-// MathRecall CLI Test Harness
+// SymbolicStateRecall CLI Test Harness
 //
 // Run this to interactively test the parser and navigation engine.
 // Type equations to parse them, then use recall commands to navigate.
@@ -38,7 +38,7 @@ class TestHarness: NavigationEngineDelegate {
 
     func run() {
         print("╔══════════════════════════════════════════╗")
-        print("║       MathRecall v1 — CLI Test Harness   ║")
+        print("║   SymbolicStateRecall v1 — CLI Harness   ║")
         print("╠══════════════════════════════════════════╣")
         print("║ Type 'help' for commands                 ║")
         print("║ Type 'parse <equation>' to start         ║")
@@ -172,7 +172,7 @@ class TestHarness: NavigationEngineDelegate {
     func showHelp() {
         print("""
 
-        ┌─ MathRecall CLI Commands ──────────────────────┐
+        ┌─ SymbolicStateRecall CLI Commands ─────────────┐
         │                                                  │
         │  parse <eq>    Parse an equation                 │
         │  recall        Enter recall mode (Option+Space)  │
@@ -212,7 +212,11 @@ class TestHarness: NavigationEngineDelegate {
     }
 }
 
-// MARK: - Entry Point
-
-let harness = TestHarness()
-harness.run()
+// MARK: - Entry Point (for CLI testing)
+//
+// To run as CLI: Create a separate command-line target in Xcode
+// and add this to its main.swift:
+//
+//   let harness = TestHarness()
+//   harness.run()
+//

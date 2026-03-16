@@ -1,5 +1,5 @@
 // Parser.swift
-// MathRecall
+// SymbolicStateRecall
 //
 // Recursive descent parser that converts a token stream into an AST.
 // Handles operator precedence, implicit multiplication, and all v1 structures.
@@ -157,20 +157,20 @@ class Parser {
         return expr
     }
 
-    /// term → factor (('*' | implicit_multiply) factor)*
+    /// term → division (('*' | implicit_multiply) division)*
     private func parseTerm() throws -> MathNode {
-        var left = try parseFactor()
+        var left = try parseDivision()
 
         while true {
             if current.type == .multiply {
                 advance()
-                let right = try parseFactor()
+                let right = try parseDivision()
                 // For implicit/explicit multiplication, combine into a single node
                 let product = MathNode(type: .term, value: "*", children: [left, right])
                 product.label = "\(left.label) times \(right.label)"
                 left = product
             } else if isImplicitMultiply() {
-                let right = try parseFactor()
+                let right = try parseDivision()
                 let product = MathNode(type: .term, value: "*", children: [left, right])
                 product.label = "\(left.label) \(right.label)"
                 left = product
@@ -194,6 +194,23 @@ class Parser {
         default:
             return false
         }
+    }
+
+    /// division → factor ('/' factor)?
+    /// Creates fraction nodes for division operations.
+    private func parseDivision() throws -> MathNode {
+        let left = try parseFactor()
+
+        if current.type == .divide {
+            advance()
+            let right = try parseFactor()
+
+            let fraction = MathNode(type: .fraction, children: [left, right])
+            fraction.label = "\(left.label) over \(right.label)"
+            return fraction
+        }
+
+        return left
     }
 
     /// factor → unary ('^' factor)?
