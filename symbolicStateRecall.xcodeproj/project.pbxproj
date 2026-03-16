@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		600B2E622F67F769007B6FE6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600B2E482F67F767007B6FE6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 600B2E4F2F67F767007B6FE6;
+			remoteInfo = symbolicStateRecall;
+		};
+		600B2E6C2F67F769007B6FE6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600B2E482F67F767007B6FE6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 600B2E4F2F67F767007B6FE6;
+			remoteInfo = symbolicStateRecall;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		600B2E502F67F767007B6FE6 /* symbolicStateRecall.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = symbolicStateRecall.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		600B2E612F67F769007B6FE6 /* symbolicStateRecallTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = symbolicStateRecallTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		600B2E6B2F67F769007B6FE6 /* symbolicStateRecallUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = symbolicStateRecallUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		600B2E522F67F767007B6FE6 /* symbolicStateRecall */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = symbolicStateRecall;
+			sourceTree = "<group>";
+		};
+		600B2E642F67F769007B6FE6 /* symbolicStateRecallTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = symbolicStateRecallTests;
+			sourceTree = "<group>";
+		};
+		600B2E6E2F67F769007B6FE6 /* symbolicStateRecallUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = symbolicStateRecallUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		600B2E4D2F67F767007B6FE6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600B2E5E2F67F769007B6FE6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600B2E682F67F769007B6FE6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		600B2E472F67F767007B6FE6 = {
+			isa = PBXGroup;
+			children = (
+				600B2E522F67F767007B6FE6 /* symbolicStateRecall */,
+				600B2E642F67F769007B6FE6 /* symbolicStateRecallTests */,
+				600B2E6E2F67F769007B6FE6 /* symbolicStateRecallUITests */,
+				600B2E512F67F767007B6FE6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		600B2E512F67F767007B6FE6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				600B2E502F67F767007B6FE6 /* symbolicStateRecall.app */,
+				600B2E612F67F769007B6FE6 /* symbolicStateRecallTests.xctest */,
+				600B2E6B2F67F769007B6FE6 /* symbolicStateRecallUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		600B2E4F2F67F767007B6FE6 /* symbolicStateRecall */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600B2E752F67F769007B6FE6 /* Build configuration list for PBXNativeTarget "symbolicStateRecall" */;
+			buildPhases = (
+				600B2E4C2F67F767007B6FE6 /* Sources */,
+				600B2E4D2F67F767007B6FE6 /* Frameworks */,
+				600B2E4E2F67F767007B6FE6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				600B2E522F67F767007B6FE6 /* symbolicStateRecall */,
+			);
+			name = symbolicStateRecall;
+			packageProductDependencies = (
+			);
+			productName = symbolicStateRecall;
+			productReference = 600B2E502F67F767007B6FE6 /* symbolicStateRecall.app */;
+			productType = "com.apple.product-type.application";
+		};
+		600B2E602F67F769007B6FE6 /* symbolicStateRecallTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600B2E782F67F769007B6FE6 /* Build configuration list for PBXNativeTarget "symbolicStateRecallTests" */;
+			buildPhases = (
+				600B2E5D2F67F769007B6FE6 /* Sources */,
+				600B2E5E2F67F769007B6FE6 /* Frameworks */,
+				600B2E5F2F67F769007B6FE6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				600B2E632F67F769007B6FE6 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				600B2E642F67F769007B6FE6 /* symbolicStateRecallTests */,
+			);
+			name = symbolicStateRecallTests;
+			packageProductDependencies = (
+			);
+			productName = symbolicStateRecallTests;
+			productReference = 600B2E612F67F769007B6FE6 /* symbolicStateRecallTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		600B2E6A2F67F769007B6FE6 /* symbolicStateRecallUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 600B2E7B2F67F769007B6FE6 /* Build configuration list for PBXNativeTarget "symbolicStateRecallUITests" */;
+			buildPhases = (
+				600B2E672F67F769007B6FE6 /* Sources */,
+				600B2E682F67F769007B6FE6 /* Frameworks */,
+				600B2E692F67F769007B6FE6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				600B2E6D2F67F769007B6FE6 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				600B2E6E2F67F769007B6FE6 /* symbolicStateRecallUITests */,
+			);
+			name = symbolicStateRecallUITests;
+			packageProductDependencies = (
+			);
+			productName = symbolicStateRecallUITests;
+			productReference = 600B2E6B2F67F769007B6FE6 /* symbolicStateRecallUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		600B2E482F67F767007B6FE6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					600B2E4F2F67F767007B6FE6 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					600B2E602F67F769007B6FE6 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 600B2E4F2F67F767007B6FE6;
+					};
+					600B2E6A2F67F769007B6FE6 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = 600B2E4F2F67F767007B6FE6;
+					};
+				};
+			};
+			buildConfigurationList = 600B2E4B2F67F767007B6FE6 /* Build configuration list for PBXProject "symbolicStateRecall" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 600B2E472F67F767007B6FE6;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 600B2E512F67F767007B6FE6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				600B2E4F2F67F767007B6FE6 /* symbolicStateRecall */,
+				600B2E602F67F769007B6FE6 /* symbolicStateRecallTests */,
+				600B2E6A2F67F769007B6FE6 /* symbolicStateRecallUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		600B2E4E2F67F767007B6FE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600B2E5F2F67F769007B6FE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600B2E692F67F769007B6FE6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		600B2E4C2F67F767007B6FE6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600B2E5D2F67F769007B6FE6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		600B2E672F67F769007B6FE6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		600B2E632F67F769007B6FE6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 600B2E4F2F67F767007B6FE6 /* symbolicStateRecall */;
+			targetProxy = 600B2E622F67F769007B6FE6 /* PBXContainerItemProxy */;
+		};
+		600B2E6D2F67F769007B6FE6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 600B2E4F2F67F767007B6FE6 /* symbolicStateRecall */;
+			targetProxy = 600B2E6C2F67F769007B6FE6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		600B2E732F67F769007B6FE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		600B2E742F67F769007B6FE6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		600B2E762F67F769007B6FE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = symbolicStateRecall/symbolicStateRecall.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"symbolicStateRecall/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = asimsayed.symbolicStateRecall;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		600B2E772F67F769007B6FE6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = symbolicStateRecall/symbolicStateRecall.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"symbolicStateRecall/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = asimsayed.symbolicStateRecall;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		600B2E792F67F769007B6FE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = asimsayed.symbolicStateRecallTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/symbolicStateRecall.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/symbolicStateRecall";
+			};
+			name = Debug;
+		};
+		600B2E7A2F67F769007B6FE6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = asimsayed.symbolicStateRecallTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/symbolicStateRecall.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/symbolicStateRecall";
+			};
+			name = Release;
+		};
+		600B2E7C2F67F769007B6FE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = asimsayed.symbolicStateRecallUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = symbolicStateRecall;
+			};
+			name = Debug;
+		};
+		600B2E7D2F67F769007B6FE6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = asimsayed.symbolicStateRecallUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = symbolicStateRecall;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		600B2E4B2F67F767007B6FE6 /* Build configuration list for PBXProject "symbolicStateRecall" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600B2E732F67F769007B6FE6 /* Debug */,
+				600B2E742F67F769007B6FE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600B2E752F67F769007B6FE6 /* Build configuration list for PBXNativeTarget "symbolicStateRecall" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600B2E762F67F769007B6FE6 /* Debug */,
+				600B2E772F67F769007B6FE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600B2E782F67F769007B6FE6 /* Build configuration list for PBXNativeTarget "symbolicStateRecallTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600B2E792F67F769007B6FE6 /* Debug */,
+				600B2E7A2F67F769007B6FE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		600B2E7B2F67F769007B6FE6 /* Build configuration list for PBXNativeTarget "symbolicStateRecallUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				600B2E7C2F67F769007B6FE6 /* Debug */,
+				600B2E7D2F67F769007B6FE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 600B2E482F67F767007B6FE6 /* Project object */;
+}
