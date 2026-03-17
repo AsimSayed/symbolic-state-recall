@@ -82,7 +82,7 @@ class NavigationEngine {
     private(set) var currentPath: [String] = []  // tokens entered so far
 
     private var topLevelIndex: TopLevelIndex?
-    private var root: MathNode?
+    private var roots: [MathNode] = []
 
     // Partial query state
     private var pendingLine: Int?
@@ -90,18 +90,32 @@ class NavigationEngine {
 
     // MARK: - Setup
 
-    /// Load a parsed equation for navigation.
+    /// Load a parsed equation for navigation (single-line).
     func load(root: MathNode, index: TopLevelIndex) {
-        self.root = root
+        self.roots = [root]
         self.topLevelIndex = index
         reset()
     }
 
-    /// Load from a string (parses internally).
+    /// Load multiple parsed equations for navigation (multi-line).
+    func load(roots: [MathNode], index: TopLevelIndex) {
+        self.roots = roots
+        self.topLevelIndex = index
+        reset()
+    }
+
+    /// Load from a string (parses internally, single-line).
     func load(equation: String) throws {
         let parser = Parser()
         let (root, index) = try parser.parseAndIndex(equation)
         load(root: root, index: index)
+    }
+
+    /// Load from a multi-line string (parses each line as separate equation).
+    func loadMultiLine(equations: String) throws {
+        let parser = Parser()
+        let (roots, index) = try parser.parseMultiLine(equations)
+        load(roots: roots, index: index)
     }
 
     /// Reset all state.
@@ -118,7 +132,7 @@ class NavigationEngine {
 
     /// Enter or re-enter recall mode.
     func trigger() {
-        guard root != nil, let index = topLevelIndex else {
+        guard !roots.isEmpty, let index = topLevelIndex else {
             emit(.error(message: "No equation loaded"))
             return
         }

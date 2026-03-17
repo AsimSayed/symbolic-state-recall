@@ -472,6 +472,23 @@ extension Parser {
         let index = TopLevelIndex(root: root)
         return (root, index)
     }
+
+    /// Parse multiple lines of equations.
+    /// Each non-empty line becomes a separate equation indexed by line number.
+    func parseMultiLine(_ input: String) throws -> (roots: [MathNode], index: TopLevelIndex) {
+        let lines = input.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var roots: [MathNode] = []
+        for line in lines {
+            let root = try parse(line)
+            roots.append(root)
+        }
+
+        let index = TopLevelIndex(roots: roots)
+        return (roots, index)
+    }
 }
 
 // MARK: - Top-Level Index
@@ -481,8 +498,17 @@ struct TopLevelIndex {
     /// Storage: lineIndex → ("L" or "R") → [MathNode]
     private var index: [Int: [String: [MathNode]]] = [:]
 
+    /// Initialize with a single root (single-line mode).
     init(root: MathNode) {
         buildIndex(root: root, line: 1)
+    }
+
+    /// Initialize with multiple roots (multi-line mode).
+    /// Each root is assigned a line number starting from 1.
+    init(roots: [MathNode]) {
+        for (i, root) in roots.enumerated() {
+            buildIndex(root: root, line: i + 1)
+        }
     }
 
     private mutating func buildIndex(root: MathNode, line: Int) {
@@ -500,7 +526,7 @@ struct TopLevelIndex {
             index[line, default: [:]][root.value] = root.children
         default:
             // Wrap in left side
-            index[line, default: [:]][" L"] = [root]
+            index[line, default: [:]][ "L"] = [root]
         }
     }
 
@@ -532,5 +558,10 @@ struct TopLevelIndex {
     /// Available sides for a line.
     func sides(line: Int) -> [String] {
         return (index[line]?.keys.sorted()) ?? []
+    }
+
+    /// Get the total number of lines.
+    var lineCount: Int {
+        return index.count
     }
 }

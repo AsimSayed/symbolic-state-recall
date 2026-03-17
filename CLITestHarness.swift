@@ -81,6 +81,10 @@ class TestHarness: NavigationEngineDelegate {
                 parseEquation(equation)
             }
 
+        case "parsemulti", "pm":
+            print("Enter equations (one per line). Type 'end' or empty line when done:")
+            parseMultiLine()
+
         case "recall", "trigger":
             engine.trigger()
 
@@ -144,6 +148,49 @@ class TestHarness: NavigationEngineDelegate {
         }
     }
 
+    func parseMultiLine() {
+        var lines: [String] = []
+        var lineNum = 1
+
+        while true {
+            print("  \(lineNum): ", terminator: "")
+            guard let line = readLine() else { break }
+
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.lowercased() == "end" {
+                break
+            }
+
+            lines.append(trimmed)
+            lineNum += 1
+        }
+
+        if lines.isEmpty {
+            print("No equations entered.")
+            return
+        }
+
+        do {
+            let parser = Parser()
+            let multiInput = lines.joined(separator: "\n")
+            let (roots, index) = try parser.parseMultiLine(multiInput)
+
+            currentRoot = roots.first
+            currentIndex = index
+            engine.load(roots: roots, index: index)
+
+            print("\n✅ Parsed \(roots.count) equations successfully!")
+            print("\n--- Top-Level Index ---")
+            printIndex(index)
+            print("\nType 'recall' to enter recall mode.")
+            print("Query format: <line> <L/R> <index>")
+            print("Example: 2 L 1 → Line 2, Left side, Item 1")
+
+        } catch {
+            print("❌ Parse error: \(error)")
+        }
+    }
+
     func showTree() {
         if let root = currentRoot {
             print("\n--- AST ---")
@@ -172,30 +219,35 @@ class TestHarness: NavigationEngineDelegate {
     func showHelp() {
         print("""
 
-        ┌─ SymbolicStateRecall CLI Commands ─────────────┐
-        │                                                  │
-        │  parse <eq>    Parse an equation                 │
-        │  recall        Enter recall mode (Option+Space)  │
-        │  <number>      Input index token                 │
-        │  L / R         Select side                       │
-        │  space         Insert selected node              │
-        │  back          Go back one level                 │
-        │  exit          Exit recall mode                  │
-        │  tree          Show current AST                  │
-        │  index         Show top-level index              │
-        │  state         Show current engine state         │
-        │  help          Show this help                    │
-        │  quit          Exit program                      │
-        │                                                  │
-        │  Example session:                                │
-        │  > parse x^2 + 3x + 5 = 20                      │
-        │  > recall                                        │
-        │  > 1                                             │
-        │  > L                                             │
-        │  > 1                                             │
-        │  > 2      (gets exponent)                        │
-        │  > space  (inserts "2")                           │
-        └──────────────────────────────────────────────────┘
+        ┌─ SymbolicStateRecall CLI Commands ─────────────────┐
+        │                                                      │
+        │  parse <eq>    Parse a single equation               │
+        │  parsemulti    Parse multiple equations (multi-line) │
+        │  recall        Enter recall mode (Option+Space)      │
+        │  <number>      Input line or index token             │
+        │  L / R         Select side                           │
+        │  space         Insert selected node                  │
+        │  back          Go back one level                     │
+        │  exit          Exit recall mode                      │
+        │  tree          Show current AST                      │
+        │  index         Show top-level index                  │
+        │  state         Show current engine state             │
+        │  help          Show this help                        │
+        │  quit          Exit program                          │
+        │                                                      │
+        │  Single-line example:                                │
+        │  > parse x^2 + 3x + 5 = 20                          │
+        │  > recall                                            │
+        │  > 1 L 1       (Line 1, Left, Item 1)               │
+        │                                                      │
+        │  Multi-line example:                                 │
+        │  > parsemulti                                        │
+        │    1: x^2 + y^2 = r^2                               │
+        │    2: a^2 + b^2 = c^2                               │
+        │    3: end                                            │
+        │  > recall                                            │
+        │  > 2 L 1       (Line 2, Left, Item 1 → a^2)         │
+        └──────────────────────────────────────────────────────┘
         """)
     }
 
