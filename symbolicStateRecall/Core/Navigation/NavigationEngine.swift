@@ -29,7 +29,7 @@ class RecallContext {
     let mode: Mode
     let node: MathNode?         // Current parent node (nil at top level)
     let items: [MathNode]       // Available children at this level
-    weak var parentContext: RecallContext?  // For back navigation (weak to avoid retain cycles)
+    var parentContext: RecallContext?  // For back navigation (no retain cycle: parent doesn't reference child)
 
     init(mode: Mode, node: MathNode?, items: [MathNode], parentContext: RecallContext?) {
         self.mode = mode
@@ -242,23 +242,49 @@ class NavigationEngine {
     func goBack() {
         if let ctx = currentContext {
             if let parentCtx = ctx.parentContext {
+                // Go to parent context
                 currentContext = parentCtx
                 selectedNode = parentCtx.node
-                let desc = parentCtx.node?.structureSummary ?? "Top level"
+                let desc: String
+                if parentCtx.mode == .top && parentCtx.node == nil {
+                    desc = "\(parentCtx.items.count) items"
+                } else {
+                    desc = parentCtx.node?.structureSummary ?? "Top level"
+                }
                 emit(.navigatedBack(contextDescription: desc))
                 state = .recallActive
             } else {
-                // At top level already
+                // At topmost context (side level), go back to line/side selection
                 currentContext = nil
                 selectedNode = nil
-                pendingLine = nil
-                pendingSide = nil
                 currentPath = []
-                emit(.navigatedBack(contextDescription: "Top level"))
+
+                if let line = pendingLine, let index = topLevelIndex {
+                    let sides = index.sides(line: line)
+                    if sides.count > 1 {
+                        // Multiple sides — go back to side selection
+                        pendingSide = nil
+                        emit(.navigatedBack(contextDescription: "Line \(line). Select side."))
+                    } else if roots.count > 1 {
+                        // Single side but multiple lines — go back to line selection
+                        pendingLine = nil
+                        pendingSide = nil
+                        emit(.navigatedBack(contextDescription: "\(roots.count) lines"))
+                    } else {
+                        // Single line, single side — already at top
+                        emit(.error(message: "At top level"))
+                    }
+                } else if roots.count > 1 {
+                    pendingLine = nil
+                    pendingSide = nil
+                    emit(.navigatedBack(contextDescription: "\(roots.count) lines"))
+                } else {
+                    emit(.error(message: "At top level"))
+                }
                 state = .recallActive
             }
         } else {
-            // Already at top
+            // No context at all
             emit(.error(message: "At top level"))
         }
     }
@@ -320,6 +346,17 @@ class NavigationEngine {
                 emitError("No item at position \(position). \(count) items available.")
             }
             return
+        }
+
+        // Create a side-level context so "back" can return to item selection
+        if currentContext == nil {
+            let sideItems = index.items(line: line, side: side)
+            currentContext = RecallContext(
+                mode: .top,
+                node: nil,
+                items: sideItems,
+                parentContext: nil
+            )
         }
 
         selectNode(node)
