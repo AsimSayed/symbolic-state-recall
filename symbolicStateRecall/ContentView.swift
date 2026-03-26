@@ -8,17 +8,183 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var coordinator: AppCoordinator
+    @State private var equationInput: String = ""
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(alignment: .leading, spacing: 16) {
+            // Equation input
+            HStack {
+                TextField("Type equation, e.g. x^2 + 3x = 5", text: $equationInput)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { loadEquation() }
+                Button("Load") { loadEquation() }
+                    .disabled(equationInput.isEmpty)
+            }
+
+            // Status indicator
+            StatusRow(state: coordinator.recallState)
+
+            // Loaded equation
+            if !coordinator.currentEquationText.isEmpty {
+                EquationRow(equation: coordinator.currentEquationText)
+
+                // Trigger recall from UI
+                if coordinator.recallState == .idle {
+                    Button("Trigger Recall (Option+Space)") {
+                        coordinator.triggerRecallFromUI()
+                    }
+                    .keyboardShortcut(" ", modifiers: .option)
+                }
+            }
+
+            // Global hotkey status
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(coordinator.isAccessibilityGranted ? Color.green : Color.secondary)
+                    .frame(width: 6, height: 6)
+                Text(coordinator.isAccessibilityGranted
+                     ? "Global hotkey active"
+                     : "Global hotkey unavailable — works in-app only")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            // Navigation state (visible during recall)
+            if coordinator.recallState != .idle {
+                NavigationStateView(
+                    path: coordinator.currentPath,
+                    selectedLabel: coordinator.selectedNodeLabel,
+                    lastSpoken: coordinator.lastSpokenText
+                )
+            }
+
+            Spacer()
         }
         .padding()
+        .frame(minWidth: 400, minHeight: 300)
+    }
+
+    private func loadEquation() {
+        guard !equationInput.isEmpty else { return }
+        coordinator.loadEquationFromUI(equationInput)
+    }
+}
+
+// MARK: - Status Row
+
+struct StatusRow: View {
+    let state: RecallState
+
+    private var statusText: String {
+        switch state {
+        case .idle: return "Idle"
+        case .recallActive: return "Recall Active"
+        case .pathBuilding: return "Path Building"
+        case .nodeResolved: return "Node Selected"
+        case .error(let msg): return "Error: \(msg)"
+        }
+    }
+
+    private var statusColor: Color {
+        switch state {
+        case .idle: return .secondary
+        case .recallActive, .pathBuilding: return .blue
+        case .nodeResolved: return .green
+        case .error: return .red
+        }
+    }
+
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 10, height: 10)
+            Text(statusText)
+                .font(.headline)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Status")
+        .accessibilityValue(statusText)
+    }
+}
+
+// MARK: - Equation Row
+
+struct EquationRow: View {
+    let equation: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Loaded Equation")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(equation)
+                .font(.system(.body, design: .monospaced))
+                .lineLimit(3)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loaded equation")
+        .accessibilityValue(equation)
+    }
+}
+
+// MARK: - Navigation State
+
+struct NavigationStateView: View {
+    let path: [String]
+    let selectedLabel: String
+    let lastSpoken: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            if !path.isEmpty {
+                HStack(spacing: 4) {
+                    Text("Path:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(path.joined(separator: " > "))
+                        .font(.system(.body, design: .monospaced))
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Navigation path")
+                .accessibilityValue(path.joined(separator: ", "))
+            }
+
+            if !selectedLabel.isEmpty {
+                HStack(spacing: 4) {
+                    Text("Selected:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(selectedLabel)
+                        .font(.body)
+                        .bold()
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Selected node")
+                .accessibilityValue(selectedLabel)
+            }
+
+            if !lastSpoken.isEmpty {
+                HStack(spacing: 4) {
+                    Text("Last:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(lastSpoken)
+                        .font(.body)
+                        .italic()
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Last announcement")
+                .accessibilityValue(lastSpoken)
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AppCoordinator())
 }

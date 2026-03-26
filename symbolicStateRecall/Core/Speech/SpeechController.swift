@@ -2,25 +2,38 @@
 // SymbolicStateRecall
 //
 // Handles speech output for the navigation engine.
-// In v1 prototype, prints to console. In production, posts
-// VoiceOver announcements via NSAccessibility.
+// Posts VoiceOver announcements via NSAccessibility in production,
+// falls back to console output for CLI testing.
 
 import Foundation
-// import AppKit  // Uncomment when building in Xcode
+import AppKit
+import AVFoundation
 
 // MARK: - Speech Controller
 
 class SpeechController: NavigationEngineDelegate {
 
     /// When true, output goes to console (for CLI testing).
-    /// When false, posts VoiceOver announcements.
+    /// When false, uses VoiceOver announcements or speech synthesis.
     var useConsoleOutput: Bool = true
+
+    /// The last text that was spoken, for UI display.
+    private(set) var lastSpokenText: String = ""
+
+    /// Speech synthesizer for when VoiceOver is not running.
+    private let synthesizer = AVSpeechSynthesizer()
 
     // MARK: - NavigationEngineDelegate
 
     func navigationEngine(_ engine: NavigationEngine, didEmit event: NavigationEvent) {
+        handleEvent(event)
+    }
+
+    /// Process a navigation event and speak the appropriate text.
+    /// Can be called directly by the AppCoordinator after forwarding.
+    func handleEvent(_ event: NavigationEvent) {
         switch event {
-        case .recallActivated(let count, let description):
+        case .recallActivated(_, let description):
             speak("Recall mode. \(description)")
 
         case .tokenAccepted(let description):
@@ -42,35 +55,67 @@ class SpeechController: NavigationEngineDelegate {
             speak("Recall mode exited.")
 
         case .error(let message):
-            speak("Error. \(message)")
+            speak(message)
         }
     }
 
     // MARK: - Speech Output
 
     func speak(_ text: String) {
+        lastSpokenText = text
+
         if useConsoleOutput {
             print("🔊 \(text)")
-        } else {
+            return
+        }
+
+        if isVoiceOverRunning {
             postVoiceOverAnnouncement(text)
+        } else {
+            speakWithSynthesizer(text)
         }
     }
 
-    /// Post an announcement through VoiceOver.
-    /// Requires the app to be accessibility-aware.
+    // MARK: - VoiceOver Detection
+
+    private var isVoiceOverRunning: Bool {
+        if #available(macOS 13.0, *) {
+            return NSWorkspace.shared.isVoiceOverEnabled
+        }
+        // Fallback: check if VoiceOver process is running
+        return !NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.apple.VoiceOver.VoiceOver"
+        ).isEmpty
+    }
+
+    // MARK: - Speech Synthesis (fallback when VoiceOver is off)
+
+    private func speakWithSynthesizer(_ text: String) {
+        synthesizer.stopSpeaking(at: .immediate)
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.15
+        utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+        synthesizer.speak(utterance)
+
+        #if DEBUG
+        print("🔊 [Synth] \(text)")
+        #endif
+    }
+
+    // MARK: - VoiceOver Announcements
+
     private func postVoiceOverAnnouncement(_ text: String) {
-        // Uncomment when building in Xcode with AppKit:
-        //
-        // NSAccessibility.post(
-        //     element: NSApp.mainWindow as Any,
-        //     notification: .announcementRequested,
-        //     userInfo: [
-        //         .announcement: text,
-        //         .priority: NSAccessibilityPriorityLevel.high.rawValue
-        //     ]
-        // )
-        //
-        // For now, fall back to console:
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: text,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
+
+        #if DEBUG
         print("🔊 [VO] \(text)")
+        #endif
     }
 }

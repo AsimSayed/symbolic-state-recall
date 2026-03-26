@@ -99,29 +99,34 @@ class Parser {
 
     // MARK: - Grammar Rules
 
-    /// equation → expression ('=' expression)?
+    /// equation → expression ('=' expression)*
     private func parseEquation() throws -> MathNode {
-        let left = try parseExpression()
+        var parts: [MathNode] = []
+        parts.append(try parseExpression())
 
-        if current.type == .equals {
+        while current.type == .equals {
             advance()
-            let right = try parseExpression()
-
-            let leftSide = MathNode(type: .side, value: "L", children: flattenTopLevel(left))
-            leftSide.label = "left side"
-
-            let rightSide = MathNode(type: .side, value: "R", children: flattenTopLevel(right))
-            rightSide.label = "right side"
-
-            let equation = MathNode(type: .equation, value: "=", children: [leftSide, rightSide])
-            equation.label = "equation"
-            return equation
+            parts.append(try parseExpression())
         }
 
-        // No equals sign — wrap in a single side
-        let side = MathNode(type: .side, value: "L", children: flattenTopLevel(left))
-        side.label = "left side"
-        return side
+        if parts.count == 1 {
+            // No equals sign — single part
+            let side = MathNode(type: .side, value: "1", children: flattenTopLevel(parts[0]))
+            side.label = "part 1"
+            return side
+        }
+
+        // Multiple parts separated by =
+        var children: [MathNode] = []
+        for (i, part) in parts.enumerated() {
+            let side = MathNode(type: .side, value: "\(i + 1)", children: flattenTopLevel(part))
+            side.label = "part \(i + 1)"
+            children.append(side)
+        }
+
+        let equation = MathNode(type: .equation, value: "=", children: children)
+        equation.label = "equation"
+        return equation
     }
 
     /// Flatten an expression into top-level recallable items.
@@ -555,9 +560,9 @@ struct TopLevelIndex {
         return index.keys.sorted()
     }
 
-    /// Available sides for a line.
+    /// Available parts for a line.
     func sides(line: Int) -> [String] {
-        return (index[line]?.keys.sorted()) ?? []
+        return (index[line]?.keys.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }) ?? []
     }
 
     /// Get the total number of lines.

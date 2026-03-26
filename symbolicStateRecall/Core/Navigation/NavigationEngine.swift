@@ -161,14 +161,28 @@ class NavigationEngine {
             currentContext = nil
             let lines = index.lines
             if lines.count == 1 {
-                // Auto-select line 1
+                // Single line — auto-select it
                 pendingLine = 1
                 let sides = index.sides(line: 1)
-                let totalItems = sides.reduce(0) { $0 + index.count(line: 1, side: $1) }
-                emit(.recallActivated(
-                    itemCount: totalItems,
-                    contextDescription: "Line 1. \(totalItems) items."
-                ))
+
+                if sides.count == 1 {
+                    // Single side too — skip straight to item selection
+                    let side = sides[0]
+                    pendingSide = side
+                    selectedNode = sideNode(line: 1, side: side)
+                    let items = index.items(line: 1, side: side)
+                    emit(.recallActivated(
+                        itemCount: items.count,
+                        contextDescription: itemSummary(items)
+                    ))
+                } else {
+                    // Multiple parts — prompt for part number
+                    let totalItems = sides.reduce(0) { $0 + index.count(line: 1, side: $1) }
+                    emit(.recallActivated(
+                        itemCount: totalItems,
+                        contextDescription: "\(sides.count) parts."
+                    ))
+                }
             } else {
                 emit(.recallActivated(
                     itemCount: lines.count,
@@ -204,18 +218,27 @@ class NavigationEngine {
                 emitError("Invalid line number: \(normalized)")
             }
         } else if pendingSide == nil {
-            // Expecting side: L or R
-            if normalized == "L" || normalized == "R" {
-                resolveSideToken(normalized)
+            // Expecting part number (or L/R aliases for parts 1/2)
+            let partKey: String?
+            if normalized == "L" { partKey = "1" }
+            else if normalized == "R" { partKey = "2" }
+            else if Int(normalized) != nil { partKey = normalized }
+            else { partKey = nil }
+
+            if let key = partKey {
+                resolveSideToken(key)
             } else {
-                emitError("Invalid side. Enter L or R.")
+                emitError("Enter a part number.")
             }
         } else {
-            // Expecting index
+            // Part selected, expecting item index
             if let idx = Int(normalized) {
                 resolveTopLevelIndex(idx)
+            } else if normalized == "L" || normalized == "R" {
+                // Allow switching parts via L/R aliases
+                resolveSideToken(normalized == "L" ? "1" : "2")
             } else {
-                emitError("Invalid index: \(normalized)")
+                emitError("Enter a number to select an item.")
             }
         }
     }
@@ -245,47 +268,52 @@ class NavigationEngine {
                 // Go to parent context
                 currentContext = parentCtx
                 selectedNode = parentCtx.node
-                let desc: String
-                if parentCtx.mode == .top && parentCtx.node == nil {
-                    desc = "\(parentCtx.items.count) items"
-                } else {
-                    desc = parentCtx.node?.structureSummary ?? "Top level"
-                }
+                let desc = parentCtx.node?.structureSummary ?? itemSummary(parentCtx.items)
                 emit(.navigatedBack(contextDescription: desc))
                 state = .recallActive
             } else {
-                // At topmost context (side level), go back to line/side selection
+                // At topmost context (side level), go back to side or line selection
                 currentContext = nil
                 selectedNode = nil
                 currentPath = []
-
-                if let line = pendingLine, let index = topLevelIndex {
-                    let sides = index.sides(line: line)
-                    if sides.count > 1 {
-                        // Multiple sides — go back to side selection
-                        pendingSide = nil
-                        emit(.navigatedBack(contextDescription: "Line \(line). Select side."))
-                    } else if roots.count > 1 {
-                        // Single side but multiple lines — go back to line selection
-                        pendingLine = nil
-                        pendingSide = nil
-                        emit(.navigatedBack(contextDescription: "\(roots.count) lines"))
-                    } else {
-                        // Single line, single side — already at top
-                        emit(.error(message: "At top level"))
-                    }
-                } else if roots.count > 1 {
-                    pendingLine = nil
-                    pendingSide = nil
-                    emit(.navigatedBack(contextDescription: "\(roots.count) lines"))
-                } else {
-                    emit(.error(message: "At top level"))
-                }
+                goBackToSideOrLineLevel()
                 state = .recallActive
             }
         } else {
-            // No context at all
-            emit(.error(message: "At top level"))
+            // No context — back out of side or line selection
+            goBackToSideOrLineLevel()
+        }
+    }
+
+    /// Shared logic for backing up to side selection or line selection.
+    private func goBackToSideOrLineLevel() {
+        if pendingSide != nil, let line = pendingLine, let index = topLevelIndex {
+            let sides = index.sides(line: line)
+            if sides.count > 1 {
+                // Go back to part selection — line is still the implicit selection
+                pendingSide = nil
+                selectedNode = (line >= 1 && line <= roots.count) ? roots[line - 1] : nil
+                currentPath = []
+                emit(.navigatedBack(contextDescription: "Line \(line). \(sides.count) parts."))
+            } else if roots.count > 1 {
+                // Single side — go back to line listing
+                pendingLine = nil
+                pendingSide = nil
+                selectedNode = nil
+                currentPath = []
+                emit(.navigatedBack(contextDescription: "\(roots.count) lines."))
+            } else {
+                emit(.navigatedBack(contextDescription: "At top level. Press Escape to exit."))
+            }
+        } else if pendingLine != nil && roots.count > 1 {
+            // At line level — go back to line listing
+            pendingLine = nil
+            pendingSide = nil
+            selectedNode = nil
+            currentPath = []
+            emit(.navigatedBack(contextDescription: "\(roots.count) lines."))
+        } else {
+            emit(.navigatedBack(contextDescription: "At top level. Press Escape to exit."))
         }
     }
 
@@ -306,15 +334,21 @@ class NavigationEngine {
         }
 
         pendingLine = line
+        // Select the line's root so Space inserts the whole line
+        if line >= 1 && line <= roots.count {
+            selectedNode = roots[line - 1]
+        }
         emit(.tokenAccepted(description: "Line \(line)"))
         state = .pathBuilding
 
-        // If equation has no = sign, auto-select left side
+        // If only one part, auto-select it
         let sides = index.sides(line: line)
-        if sides == ["L"] {
-            pendingSide = "L"
-            let count = index.count(line: line, side: "L")
-            emit(.tokenAccepted(description: "Left side. \(count) items."))
+        if sides.count == 1 {
+            let side = sides[0]
+            pendingSide = side
+            selectedNode = sideNode(line: line, side: side)
+            let items = index.items(line: line, side: side)
+            emit(.tokenAccepted(description: itemSummary(items)))
         }
     }
 
@@ -323,13 +357,16 @@ class NavigationEngine {
 
         let items = index.items(line: line, side: side)
         if items.isEmpty {
-            emitError("No items on \(side == "L" ? "left" : "right") side")
+            let available = index.sides(line: line)
+            emitError("No part \(side). \(available.count) parts available.")
             return
         }
 
         pendingSide = side
-        let sideName = side == "L" ? "Left side" : "Right side"
-        emit(.tokenAccepted(description: "\(sideName). \(items.count) items."))
+        currentContext = nil
+        // Select the part node so Space inserts the whole part
+        selectedNode = sideNode(line: line, side: side)
+        emit(.tokenAccepted(description: "Part \(side). \(itemSummary(items))"))
         state = .pathBuilding
     }
 
@@ -392,8 +429,41 @@ class NavigationEngine {
                 parentContext: currentContext
             )
             currentContext = newContext
-            emit(.contextOpened(structureSummary: node.structureSummary))
+            // Read structure type and child labels
+            let childDescs = node.children.enumerated().map { (i, child) in
+                let role = i < node.childLabels.count ? node.childLabels[i] : "item \(i + 1)"
+                return "\(i + 1) \(role): \(child.label)"
+            }
+            let summary = "\(node.structureSummary) \(childDescs.joined(separator: ", "))"
+            emit(.contextOpened(structureSummary: summary))
         }
+    }
+
+    // MARK: - Node Lookup
+
+    /// Find the side node for a given line and side key.
+    private func sideNode(line: Int, side: String) -> MathNode? {
+        guard line >= 1 && line <= roots.count else { return nil }
+        let root = roots[line - 1]
+        if root.type == .equation {
+            return root.children.first { $0.value == side }
+        }
+        // Single side — root is the side node itself
+        return root
+    }
+
+    // MARK: - Item Summary
+
+    /// Build a spoken summary of items at a level, e.g. "3 items: x squared, plus 3 x, plus 5"
+    private func itemSummary(_ items: [MathNode]) -> String {
+        let count = "\(items.count) \(items.count == 1 ? "item" : "items")"
+        if items.isEmpty { return count }
+        let labels = items.prefix(6).map { $0.label }
+        let listing = labels.joined(separator: ", ")
+        if items.count > 6 {
+            return "\(count): \(listing), and more"
+        }
+        return "\(count): \(listing)"
     }
 
     // MARK: - Event Emission

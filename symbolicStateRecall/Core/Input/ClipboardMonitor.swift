@@ -38,6 +38,9 @@ class ClipboardMonitor {
     /// Whether monitoring is active.
     private(set) var isMonitoring: Bool = false
 
+    /// Suppresses clipboard change detection during text insertion to prevent feedback loops.
+    private var isInserting: Bool = false
+
     // MARK: - Lifecycle
 
     deinit {
@@ -83,6 +86,8 @@ class ClipboardMonitor {
     // MARK: - Private
 
     private func checkClipboard() {
+        guard !isInserting else { return }
+
         let currentCount = pasteboard.changeCount
 
         guard currentCount != lastChangeCount else { return }
@@ -105,6 +110,8 @@ extension ClipboardMonitor {
     /// - Parameter text: The text to insert.
     /// - Parameter restoreClipboard: If true, restores the original clipboard content after insertion.
     func insertText(_ text: String, restoreClipboard: Bool = true) {
+        isInserting = true
+
         // Save current clipboard content
         let savedContent = restoreClipboard ? pasteboard.string(forType: .string) : nil
 
@@ -115,12 +122,17 @@ extension ClipboardMonitor {
         // Simulate Cmd+V paste
         simulatePaste()
 
-        // Restore original clipboard content after a short delay
-        if let saved = savedContent {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        // Restore original clipboard content after a short delay, then re-enable monitoring
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            if let saved = savedContent {
                 self?.pasteboard.clearContents()
                 self?.pasteboard.setString(saved, forType: .string)
             }
+            // Update lastChangeCount so we don't re-trigger on the restored content
+            if let self = self {
+                self.lastChangeCount = self.pasteboard.changeCount
+            }
+            self?.isInserting = false
         }
     }
 

@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct symbolicStateRecallApp: App {
+    @NSApplicationDelegateAdaptor(AppCoordinator.self) var coordinator
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(coordinator)
         }
     }
 }
