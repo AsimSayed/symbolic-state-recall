@@ -383,6 +383,96 @@ class NavigationTests: XCTestCase {
     }
 }
 
+class ParserEdgeCaseTests: XCTestCase {
+
+    let parser = Parser()
+
+    func testNegativeNumberAtStart() throws {
+        let node = try parser.parse("-3x^2 + 5 = 0")
+        XCTAssertEqual(node.type, .equation)
+        // Part 1 should have 2 items: -3x^2, +5
+        let part1 = node.children[0]
+        XCTAssertEqual(part1.children.count, 2)
+        // First item should contain "negative" in its label
+        XCTAssertTrue(part1.children[0].label.contains("negative"))
+    }
+
+    func testNestedFractions() throws {
+        let node = try parser.parse("(a/b)/(c/d)")
+        let outerFrac = node.children[0]
+        XCTAssertEqual(outerFrac.type, .fraction)
+        XCTAssertEqual(outerFrac.children.count, 2)
+    }
+
+    func testImplicitMultiplyWithFunction() throws {
+        let node = try parser.parse("2sin(x)")
+        XCTAssertEqual(node.type, .side)
+        // Should parse as 2 * sin(x), resulting in a term node
+        let item = node.children[0]
+        XCTAssertEqual(item.children.count, 2)  // 2 and sin(x)
+    }
+
+    func testImplicitMultiplyVariableFunction() throws {
+        let node = try parser.parse("xcos(x)")
+        XCTAssertEqual(node.type, .side)
+        let item = node.children[0]
+        XCTAssertEqual(item.children.count, 2)  // x and cos(x)
+    }
+
+    func testImplicitMultiplyParenGroups() throws {
+        let node = try parser.parse("(x+1)(x-1)")
+        XCTAssertEqual(node.type, .side)
+        let item = node.children[0]
+        XCTAssertEqual(item.children.count, 2)  // (x+1) and (x-1)
+    }
+
+    func testMultiDigitNumbers() throws {
+        let node = try parser.parse("123^45")
+        let power = node.children[0]
+        XCTAssertEqual(power.type, .power)
+        XCTAssertEqual(power.children[0].value, "123")
+        XCTAssertEqual(power.children[1].value, "45")
+    }
+
+    func testDecimalBoundsInIntegral() throws {
+        let node = try parser.parse("int_0.5^1.5 x dx")
+        let integral = node.children[0]
+        XCTAssertEqual(integral.type, .integral)
+        XCTAssertEqual(integral.children[0].value, "0.5")
+        XCTAssertEqual(integral.children[1].value, "1.5")
+    }
+
+    func testFourPartEquation() throws {
+        let node = try parser.parse("a = b = c = d")
+        XCTAssertEqual(node.type, .equation)
+        XCTAssertEqual(node.children.count, 4)
+        XCTAssertEqual(node.children[3].value, "4")
+    }
+
+    func testMismatchedParenThrows() throws {
+        XCTAssertThrowsError(try parser.parse("(x + 3"))
+    }
+
+    func testPowerLabelFourth() throws {
+        let node = try parser.parse("x^4")
+        let power = node.children[0]
+        XCTAssertEqual(power.label, "x to the fourth")
+    }
+
+    func testPowerLabelFifth() throws {
+        let node = try parser.parse("x^5")
+        let power = node.children[0]
+        XCTAssertEqual(power.label, "x to the fifth")
+    }
+
+    func testNonBreakingSpaceTolerance() throws {
+        // Non-breaking space between terms
+        let input = "x\u{00A0}+\u{00A0}3"
+        let node = try parser.parse(input)
+        XCTAssertEqual(node.type, .side)
+    }
+}
+
 class SerializerTests: XCTestCase {
 
     let parser = Parser()

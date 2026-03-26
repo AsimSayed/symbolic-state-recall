@@ -277,7 +277,10 @@ extension AppCoordinator: ClipboardMonitorDelegate {
                 try engine.load(equation: text)
             }
             currentEquationText = text
+            speech.speak("Equation loaded")
         } catch {
+            // Keep previously loaded equation — don't clear it
+            speech.speak("Clipboard content not recognized as math")
             #if DEBUG
             print("📋 Clipboard text not parseable as math: \(error)")
             #endif

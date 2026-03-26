@@ -192,7 +192,8 @@ class Parser {
     private func isImplicitMultiply() -> Bool {
         let type = current.type
         switch type {
-        case .number, .variable, .leftParen, .sqrtKeyword, .rootKeyword:
+        case .number, .variable, .leftParen, .sqrtKeyword, .rootKeyword,
+             .intKeyword, .limKeyword:
             return true
         case .funcName:
             return true
@@ -266,7 +267,15 @@ class Parser {
             return try parseIntegral()
 
         case .dKeyword:
-            return try parseDerivative()
+            // Only parse as derivative if followed by '/' (d/dx pattern)
+            if pos + 1 < tokens.count && tokens[pos + 1].type == .divide {
+                return try parseDerivative()
+            }
+            // Otherwise treat 'd' as a variable
+            let token = advance()
+            let node = MathNode(type: .value, value: token.text)
+            node.label = token.text
+            return node
 
         case .limKeyword:
             return try parseLimit()
@@ -353,12 +362,12 @@ class Parser {
         if let lo = lower, let hi = upper {
             children = [lo, hi, integrand, varNode]
             let node = MathNode(type: .integral, children: children)
-            node.label = "integral from \(lo.label) to \(hi.label) of \(integrand.label) d\(diffVar)"
+            node.label = "integral from \(lo.label) to \(hi.label) of \(integrand.label), d\(diffVar)"
             return node
         } else {
             children = [integrand, varNode]
             let node = MathNode(type: .integral, children: children)
-            node.label = "integral of \(integrand.label) d\(diffVar)"
+            node.label = "integral of \(integrand.label), d\(diffVar)"
             return node
         }
     }
@@ -461,6 +470,10 @@ class Parser {
                 node.label = "\(base.label) squared"
             } else if exp.value == "3" {
                 node.label = "\(base.label) cubed"
+            } else if exp.value == "4" {
+                node.label = "\(base.label) to the fourth"
+            } else if exp.value == "5" {
+                node.label = "\(base.label) to the fifth"
             } else {
                 node.label = "\(base.label) to the power \(exp.label)"
             }
