@@ -118,6 +118,14 @@ class NavigationEngine {
         load(roots: roots, index: index)
     }
 
+    /// Load multi-line equations tolerantly — skips lines that fail to parse.
+    /// Throws only if no lines parse successfully.
+    func loadMultiLineTolerant(equations: String) throws {
+        let parser = Parser()
+        let (roots, index) = try parser.parseMultiLineTolerant(equations)
+        load(roots: roots, index: index)
+    }
+
     /// Reset all state.
     func reset() {
         state = .idle
@@ -450,6 +458,38 @@ class NavigationEngine {
         }
         // Single side — root is the side node itself
         return root
+    }
+
+    // MARK: - Available Items
+
+    /// Number of selectable items at the current navigation level.
+    /// Used by the coordinator to decide if multi-digit buffering is needed.
+    var availableItemCount: Int {
+        // In local context — children of the current node
+        if let ctx = currentContext, ctx.mode == .local {
+            return ctx.items.count
+        }
+
+        guard let index = topLevelIndex else { return 0 }
+
+        if pendingLine == nil {
+            // Waiting for line number
+            return index.lines.count
+        }
+
+        guard let line = pendingLine else { return 0 }
+
+        if pendingSide == nil {
+            // Waiting for part number
+            return index.sides(line: line).count
+        }
+
+        // Waiting for item index within the selected part
+        if let side = pendingSide {
+            return index.count(line: line, side: side)
+        }
+
+        return 0
     }
 
     // MARK: - Item Summary

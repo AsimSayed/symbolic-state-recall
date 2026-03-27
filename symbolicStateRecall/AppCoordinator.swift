@@ -40,6 +40,11 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
     private var lastExternalAppPID: pid_t = 0
     private var workspaceObserver: Any?
 
+    /// Multi-digit input buffering: when 10+ items are available, buffer the
+    /// first digit and wait briefly for a second digit before committing.
+    private var digitBuffer: String = ""
+    private var digitBufferTimer: Timer?
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -215,13 +220,70 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func dispatchRecallToken(_ token: RecallToken) {
         switch token {
-        case .digit(let d): engine.input(token: d)
-        case .side(let s):  engine.input(token: s)
-        case .space:        handleInsert()
-        case .backspace:    engine.goBack()
-        case .escape:       engine.exitRecall()
+        case .digit(let d):
+            handleDigitInput(d)
+            return  // handleDigitInput manages updatePublishedState itself
+        case .side(let s):
+            commitDigitBuffer()
+            engine.input(token: s)
+        case .space:
+            commitDigitBuffer()
+            handleInsert()
+        case .backspace:
+            if !digitBuffer.isEmpty {
+                // Cancel buffered digit instead of going back
+                digitBufferTimer?.invalidate()
+                digitBufferTimer = nil
+                digitBuffer = ""
+            } else {
+                engine.goBack()
+            }
+        case .escape:
+            digitBufferTimer?.invalidate()
+            digitBufferTimer = nil
+            digitBuffer = ""
+            engine.exitRecall()
         }
         updatePublishedState()
+    }
+
+    /// Handle a digit keypress with context-aware buffering.
+    /// If the current level has 10+ items, buffer the first digit and wait
+    /// 400ms for a second digit. Otherwise, commit immediately.
+    private func handleDigitInput(_ digit: String) {
+        let itemCount = engine.availableItemCount
+
+        if itemCount >= 10 && digitBuffer.isEmpty {
+            // Start buffering — wait for a possible second digit
+            digitBuffer = digit
+            digitBufferTimer?.invalidate()
+            digitBufferTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self] _ in
+                self?.commitDigitBuffer()
+                self?.updatePublishedState()
+            }
+        } else if !digitBuffer.isEmpty {
+            // Second digit arrived — combine and commit immediately
+            digitBufferTimer?.invalidate()
+            digitBufferTimer = nil
+            let combined = digitBuffer + digit
+            digitBuffer = ""
+            engine.input(token: combined)
+            updatePublishedState()
+        } else {
+            // ≤9 items — commit single digit immediately
+            engine.input(token: digit)
+            updatePublishedState()
+        }
+    }
+
+    /// Commit whatever is in the digit buffer right now.
+    private func commitDigitBuffer() {
+        digitBufferTimer?.invalidate()
+        digitBufferTimer = nil
+        guard !digitBuffer.isEmpty else { return }
+        let buffered = digitBuffer
+        digitBuffer = ""
+        engine.input(token: buffered)
     }
 
     private func recallTokenForKeyCode(_ keyCode: UInt16) -> RecallToken? {
@@ -338,19 +400,25 @@ private extension AppCoordinator {
     func loadFocusedText(_ text: String) {
         do {
             if text.contains("\n") {
-                try engine.loadMultiLine(equations: text)
+                // Tolerant: skips non-math lines, only fails if nothing parses
+                try engine.loadMultiLineTolerant(equations: text)
             } else {
                 try engine.load(equation: text)
             }
             currentEquationText = text
             speech.speak("Equation loaded from screen")
         } catch {
+            // Single-line failed — try treating it as multi-line (might have
+            // extra text around the equation)
+            if !text.contains("\n") {
+                // No fallback for single line
+            }
             // Keep previously loaded equation
             if currentEquationText.isEmpty {
                 speech.speak("Focused text not recognized as math")
             }
             #if DEBUG
-            print("🔍 Focused text not parseable: \(error)")
+            print("🔍 Focused text not parseable: \(text.prefix(100)) — \(error)")
             #endif
         }
     }

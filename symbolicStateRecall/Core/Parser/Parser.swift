@@ -507,6 +507,28 @@ extension Parser {
         let index = TopLevelIndex(roots: roots)
         return (roots, index)
     }
+
+    /// Parse multi-line input tolerantly — skips lines that fail to parse.
+    /// Returns only successfully parsed equations. Throws only if nothing parses.
+    func parseMultiLineTolerant(_ input: String) throws -> (roots: [MathNode], index: TopLevelIndex) {
+        let lines = input.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var roots: [MathNode] = []
+        for line in lines {
+            if let root = try? parse(line) {
+                roots.append(root)
+            }
+        }
+
+        guard !roots.isEmpty else {
+            throw ParserError.invalidExpression("No recognizable math found")
+        }
+
+        let index = TopLevelIndex(roots: roots)
+        return (roots, index)
+    }
 }
 
 // MARK: - Top-Level Index
