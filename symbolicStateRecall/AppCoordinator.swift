@@ -17,6 +17,7 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
     let speech = SpeechController()
     let hotkeyManager = HotkeyManager()
     let clipboardMonitor = ClipboardMonitor()
+    let focusedTextReader = FocusedTextReader()
 
     // MARK: - Published State (for ContentView)
 
@@ -34,12 +35,18 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
     private var localKeyMonitor: Any?
     private var globalKeyMonitor: Any?
 
+    /// PID of the last frontmost app that isn't SSR. Used to read focused text
+    /// when the user switches to SSR's window before triggering recall.
+    private var lastExternalAppPID: pid_t = 0
+    private var workspaceObserver: Any?
+
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         engine.delegate = self
         hotkeyManager.delegate = self
         clipboardMonitor.delegate = self
+        focusedTextReader.delegate = self
         speech.useConsoleOutput = false
 
         // Clipboard doesn't need accessibility — always start
@@ -48,14 +55,23 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         // Try hotkey + check accessibility silently (no prompt)
         hotkeyManager.register()
         isAccessibilityGranted = AccessibilityPermission.isTrusted
+
+        // Track frontmost app changes so we can read from the last external app
+        startTrackingFrontmostApp()
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        // Re-check when user returns — they may have just granted permission
+        recheckAccessibility()
+    }
+
+    /// Re-check accessibility permission and update state if newly granted.
+    func recheckAccessibility() {
         let trusted = AccessibilityPermission.isTrusted
         if trusted && !isAccessibilityGranted {
             isAccessibilityGranted = true
             hotkeyManager.register()
+        } else if !trusted {
+            isAccessibilityGranted = false
         }
     }
 
@@ -63,6 +79,9 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         cleanupAllMonitors()
         hotkeyManager.unregister()
         clipboardMonitor.stop()
+        if let obs = workspaceObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+        }
     }
 
     // MARK: - UI Actions
@@ -82,6 +101,8 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
 
     func triggerRecallFromUI() {
         if engine.state == .idle {
+            // Try reading from the last external app (since SSR is now focused)
+            tryReadFromLastExternalApp()
             installKeyMonitors()
         }
         engine.trigger()
@@ -258,11 +279,94 @@ extension AppCoordinator: NavigationEngineDelegate {
 
 extension AppCoordinator: HotkeyManagerDelegate {
     func hotkeyManagerDidTrigger(_ manager: HotkeyManager) {
-        if engine.state == .idle {
-            installKeyMonitors()
+        // If already in recall, toggle off
+        if engine.state != .idle {
+            engine.trigger()
+            updatePublishedState()
+            return
         }
+
+        // Try to read from focused text element before triggering.
+        // First try the currently focused app (works when hotkey fires cross-app).
+        // Fall back to last external app PID (works when SSR is focused).
+        if let text = focusedTextReader.readFocusedTextSync(), !text.isEmpty {
+            loadFocusedText(text)
+        } else {
+            tryReadFromLastExternalApp()
+        }
+
+        installKeyMonitors()
         engine.trigger()
         updatePublishedState()
+    }
+}
+
+// MARK: - Frontmost App Tracking
+
+private extension AppCoordinator {
+    func startTrackingFrontmostApp() {
+        // Seed with the current frontmost app (if it's not us)
+        if let frontmost = NSWorkspace.shared.frontmostApplication,
+           frontmost.bundleIdentifier != Bundle.main.bundleIdentifier {
+            lastExternalAppPID = frontmost.processIdentifier
+        }
+
+        workspaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            // Only track apps that aren't SSR
+            if app.bundleIdentifier != Bundle.main.bundleIdentifier {
+                self?.lastExternalAppPID = app.processIdentifier
+            }
+        }
+    }
+
+    func tryReadFromLastExternalApp() {
+        guard lastExternalAppPID != 0 else { return }
+        if let text = focusedTextReader.readTextFromApp(pid: lastExternalAppPID), !text.isEmpty {
+            loadFocusedText(text)
+        }
+    }
+}
+
+// MARK: - Focused Text Loading
+
+private extension AppCoordinator {
+    func loadFocusedText(_ text: String) {
+        do {
+            if text.contains("\n") {
+                try engine.loadMultiLine(equations: text)
+            } else {
+                try engine.load(equation: text)
+            }
+            currentEquationText = text
+            speech.speak("Equation loaded from screen")
+        } catch {
+            // Keep previously loaded equation
+            if currentEquationText.isEmpty {
+                speech.speak("Focused text not recognized as math")
+            }
+            #if DEBUG
+            print("🔍 Focused text not parseable: \(error)")
+            #endif
+        }
+    }
+}
+
+// MARK: - FocusedTextReaderDelegate
+
+extension AppCoordinator: FocusedTextReaderDelegate {
+    func focusedTextReader(_ reader: FocusedTextReader, didReadText text: String) {
+        loadFocusedText(text)
+    }
+
+    func focusedTextReader(_ reader: FocusedTextReader, didFailWithError error: FocusedTextReaderError) {
+        #if DEBUG
+        print("🔍 Focused text reader: \(error)")
+        #endif
     }
 }
 

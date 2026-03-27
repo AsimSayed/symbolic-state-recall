@@ -38,17 +38,50 @@ struct ContentView: View {
                 }
             }
 
-            // Global hotkey status
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(coordinator.isAccessibilityGranted ? Color.green : Color.secondary)
-                    .frame(width: 6, height: 6)
-                Text(coordinator.isAccessibilityGranted
-                     ? "Global hotkey active"
-                     : "Global hotkey unavailable — works in-app only")
+            // Accessibility permission
+            HStack(spacing: 8) {
+                Image(systemName: coordinator.isAccessibilityGranted
+                      ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
+                    .foregroundStyle(coordinator.isAccessibilityGranted ? .green : .orange)
+                    .imageScale(.medium)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Accessibility")
+                        .font(.caption.weight(.semibold))
+                    Text(coordinator.isAccessibilityGranted
+                         ? "Permission granted — screen reading & global hotkey enabled"
+                         : "Required for screen reading & global hotkey")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if coordinator.isAccessibilityGranted {
+                    Button("Manage") {
+                        AccessibilityPermission.openSystemSettings()
+                    }
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .controlSize(.small)
+                } else {
+                    Button("Grant Access") {
+                        AccessibilityPermission.checkWithPrompt()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            coordinator.recheckAccessibility()
+                        }
+                    }
+                    .font(.caption)
+                    .controlSize(.small)
+                    .tint(.accentColor)
+                }
             }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(coordinator.isAccessibilityGranted
+                          ? Color.green.opacity(0.08)
+                          : Color.orange.opacity(0.08))
+            )
 
             // Navigation state (visible during recall)
             if coordinator.recallState != .idle {
