@@ -30,7 +30,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: spaceSM) {
+        VStack(alignment: .trailing, spacing: spaceSM) {
             // Main bar
             HStack(spacing: spaceSM) {
                 BarButton(icon: "xmark", showHoverColor: true) {
@@ -83,6 +83,16 @@ struct ContentView: View {
                             removal: .opacity.combined(with: .scale(scale: 0.95))
                         )
                     )
+
+                if !coordinator.recentEquations.isEmpty {
+                    recentStrip
+                        .transition(
+                            .asymmetric(
+                                insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
+                                removal: .opacity.combined(with: .scale(scale: 0.95))
+                            )
+                        )
+                }
             }
         }
         .padding(spaceLG)
@@ -198,6 +208,43 @@ struct ContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerStrip, style: .continuous))
     }
 
+    // MARK: - Recent Strip
+
+    private var recentStrip: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Recent")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.3))
+                .padding(.horizontal, spaceMD)
+                .padding(.top, spaceSM)
+                .padding(.bottom, spaceXS)
+
+            ForEach(coordinator.recentEquations, id: \.self) { equation in
+                Button(action: {
+                    coordinator.loadRecentEquation(equation)
+                }) {
+                    Text(equation)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, spaceMD)
+                        .padding(.vertical, spaceXS + 1)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background {
+                    RecentRowBackground()
+                }
+            }
+        }
+        .padding(.bottom, spaceSM)
+        .frame(minWidth: 220, maxWidth: 280)
+        .background { stripBackground }
+        .clipShape(RoundedRectangle(cornerRadius: cornerStrip, style: .continuous))
+    }
+
     private var stripBackground: some View {
         ZStack {
             RoundedRectangle(cornerRadius: cornerStrip, style: .continuous)
@@ -243,10 +290,11 @@ struct BarButton: View {
                             ? Color.red
                             : .white.opacity(isActive ? 1.0 : isHovered ? 0.9 : 0.55)
                     )
+                    .shadow(color: isActive ? .white.opacity(0.5) : .clear, radius: 4)
                     .frame(width: 40, height: 40)
                     .background {
                         RoundedRectangle(cornerRadius: cornerButton, style: .continuous)
-                            .fill(isHovered ? .white.opacity(0.08) : .clear)
+                            .fill(isActive ? .white.opacity(0.12) : isHovered ? .white.opacity(0.08) : .clear)
                     }
                     .scaleEffect(isPressed ? 0.88 : isHovered ? 1.06 : 1.0)
 
@@ -328,6 +376,19 @@ struct BarStatusItem: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Recent Row Background
+
+struct RecentRowBackground: View {
+    @State private var isHovered = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(isHovered ? .white.opacity(0.06) : .clear)
+            .onHover { isHovered = $0 }
+            .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 }
 

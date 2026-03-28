@@ -27,6 +27,9 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
     @Published var isAccessibilityGranted: Bool = false
     @Published var selectedNodeLabel: String = ""
     @Published var currentPath: [String] = []
+    @Published var recentEquations: [String] = []
+
+    private let maxRecentEquations = 7
 
     // MARK: - Private
 
@@ -88,11 +91,12 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         )
         panel.contentView = hostingView
 
-        // Position: center-bottom of main screen
+        // Position: top-right of main screen
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
-            let x = screenFrame.midX - fittingSize.width / 2
-            let y = screenFrame.minY + 60
+            let margin: CGFloat = 16
+            let x = screenFrame.maxX - fittingSize.width - margin
+            let y = screenFrame.maxY - fittingSize.height - margin
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
@@ -131,6 +135,34 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
 
+    // MARK: - Equation History
+
+    /// Record a successfully loaded equation in recent history.
+    private func recordEquation(_ text: String) {
+        currentEquationText = text
+        // Remove duplicate if already in history, then prepend
+        recentEquations.removeAll { $0 == text }
+        recentEquations.insert(text, at: 0)
+        if recentEquations.count > maxRecentEquations {
+            recentEquations.removeLast()
+        }
+    }
+
+    /// Reload a previously used equation from history.
+    func loadRecentEquation(_ text: String) {
+        do {
+            if text.contains("\n") {
+                try engine.loadMultiLine(equations: text)
+            } else {
+                try engine.load(equation: text)
+            }
+            recordEquation(text)
+            speech.speak("Equation loaded")
+        } catch {
+            speech.speak("Could not parse equation")
+        }
+    }
+
     // MARK: - UI Actions
 
     func loadEquationFromUI(_ text: String) {
@@ -140,7 +172,7 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
             } else {
                 try engine.load(equation: text)
             }
-            currentEquationText = text
+            recordEquation(text)
         } catch {
             speech.speak("Could not parse: \(error.localizedDescription)")
         }
@@ -482,7 +514,7 @@ private extension AppCoordinator {
             } else {
                 try engine.load(equation: text)
             }
-            currentEquationText = text
+            recordEquation(text)
             speech.speak("Equation loaded from screen")
         } catch {
             // Direct parse failed — try math extraction as fallback
@@ -490,7 +522,7 @@ private extension AppCoordinator {
             if let first = extracted.first {
                 do {
                     try engine.load(equation: first)
-                    currentEquationText = first
+                    recordEquation(first)
                     speech.speak("Equation loaded from screen")
                     return
                 } catch {
@@ -532,7 +564,7 @@ extension AppCoordinator: ClipboardMonitorDelegate {
             } else {
                 try engine.load(equation: text)
             }
-            currentEquationText = text
+            recordEquation(text)
             speech.speak("Equation loaded")
         } catch {
             // Keep previously loaded equation — silent on failure
