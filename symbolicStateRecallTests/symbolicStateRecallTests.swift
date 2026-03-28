@@ -502,3 +502,50 @@ class SerializerTests: XCTestCase {
         XCTAssertTrue(text.hasPrefix("sqrt("))
     }
 }
+
+// MARK: - Math Extractor Tests
+
+class MathExtractorTests: XCTestCase {
+
+    func testIsProseDetectsNaturalLanguage() {
+        XCTAssertTrue(MathExtractor.isProse("The answer to the equation is x^2 + 3 = 5 and it is useful"))
+        XCTAssertTrue(MathExtractor.isProse("Given that we have a formula for calculating the area"))
+    }
+
+    func testIsProseRejectsPureMath() {
+        XCTAssertFalse(MathExtractor.isProse("x^2 + 3x = 5"))
+        XCTAssertFalse(MathExtractor.isProse("a + b = c"))
+        XCTAssertFalse(MathExtractor.isProse("2x"))
+    }
+
+    func testExtractFromSimpleSentence() {
+        let results = MathExtractor.extractMath(from: "The equation is x^2 + 3 = 5 for all values")
+        XCTAssertFalse(results.isEmpty, "Should extract at least one math expression")
+        // The extracted expression should parse successfully
+        let parser = Parser()
+        XCTAssertNotNil(try? parser.parse(results[0]))
+    }
+
+    func testExtractFromSentenceWithEquals() {
+        let results = MathExtractor.extractMath(from: "We know that a + b = c so we can substitute")
+        XCTAssertFalse(results.isEmpty)
+        let parser = Parser()
+        XCTAssertNotNil(try? parser.parse(results[0]))
+    }
+
+    func testExtractMultipleEquations() {
+        let text = "First we have x = 5. Then y = 10."
+        let results = MathExtractor.extractMath(from: text)
+        XCTAssertGreaterThanOrEqual(results.count, 1)
+    }
+
+    func testNoMathInPureProse() {
+        let results = MathExtractor.extractMath(from: "The quick brown fox jumps over the lazy dog")
+        XCTAssertTrue(results.isEmpty)
+    }
+
+    func testExtractWithParentheses() {
+        let results = MathExtractor.extractMath(from: "Consider the function f(x) = (x + 1)^2 in this context")
+        XCTAssertFalse(results.isEmpty)
+    }
+}

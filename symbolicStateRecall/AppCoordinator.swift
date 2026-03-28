@@ -398,9 +398,44 @@ private extension AppCoordinator {
 
 private extension AppCoordinator {
     func loadFocusedText(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        // Gate 1: reject text that has no math signals at all
+        // (no operators, no math keywords, no parens)
+        guard MathExtractor.isMeaningfulMath(trimmed) else {
+            if currentEquationText.isEmpty {
+                speech.speak("No math found in text")
+            }
+            #if DEBUG
+            print("🔍 Not meaningful math: \(trimmed.prefix(80))")
+            #endif
+            return
+        }
+
+        // Gate 2: if it's prose with math embedded, extract the math
+        if MathExtractor.isProse(trimmed) {
+            let extracted = MathExtractor.extractMath(from: trimmed)
+            if let first = extracted.first {
+                loadParsedEquation(first)
+                return
+            }
+            if currentEquationText.isEmpty {
+                speech.speak("No math found in text")
+            }
+            #if DEBUG
+            print("🔍 No math extracted from prose: \(trimmed.prefix(100))")
+            #endif
+            return
+        }
+
+        // Gate 3: not prose, has math signals — try direct parse
+        loadParsedEquation(trimmed)
+    }
+
+    func loadParsedEquation(_ text: String) {
         do {
             if text.contains("\n") {
-                // Tolerant: skips non-math lines, only fails if nothing parses
                 try engine.loadMultiLineTolerant(equations: text)
             } else {
                 try engine.load(equation: text)
@@ -408,12 +443,19 @@ private extension AppCoordinator {
             currentEquationText = text
             speech.speak("Equation loaded from screen")
         } catch {
-            // Single-line failed — try treating it as multi-line (might have
-            // extra text around the equation)
-            if !text.contains("\n") {
-                // No fallback for single line
+            // Direct parse failed — try math extraction as fallback
+            let extracted = MathExtractor.extractMath(from: text)
+            if let first = extracted.first {
+                do {
+                    try engine.load(equation: first)
+                    currentEquationText = first
+                    speech.speak("Equation loaded from screen")
+                    return
+                } catch {
+                    // Extraction also failed — fall through
+                }
             }
-            // Keep previously loaded equation
+
             if currentEquationText.isEmpty {
                 speech.speak("Focused text not recognized as math")
             }
@@ -451,8 +493,7 @@ extension AppCoordinator: ClipboardMonitorDelegate {
             currentEquationText = text
             speech.speak("Equation loaded")
         } catch {
-            // Keep previously loaded equation — don't clear it
-            speech.speak("Clipboard content not recognized as math")
+            // Keep previously loaded equation — silent on failure
             #if DEBUG
             print("📋 Clipboard text not parseable as math: \(error)")
             #endif
