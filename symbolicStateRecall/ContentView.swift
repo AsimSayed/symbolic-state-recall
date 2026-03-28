@@ -7,408 +7,324 @@
 
 import SwiftUI
 
+// MARK: - Spacing System (4pt grid)
+
+private let spaceXS: CGFloat = 4
+private let spaceSM: CGFloat = 8
+private let spaceMD: CGFloat = 12
+private let spaceLG: CGFloat = 16
+
+private let cornerBar: CGFloat = 18
+private let cornerStrip: CGFloat = 12
+private let cornerButton: CGFloat = 10
+private let cornerGroup: CGFloat = 12
+
+// MARK: - Floating Dock Bar
+
 struct ContentView: View {
     @EnvironmentObject var coordinator: AppCoordinator
-    @State private var equationInput: String = ""
-    @State private var isLoadHovered = false
-    @State private var showEquation = false
+    @State private var showSettings = false
+
+    private var isRecalling: Bool {
+        coordinator.recallState != .idle
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Equation input bar
-            HStack(spacing: 10) {
-                Image(systemName: "function")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                TextField("Type equation, e.g. x^2 + 3x = 5", text: $equationInput)
-                    .textFieldStyle(.plain)
-                    .font(.system(.body, design: .monospaced))
-                    .onSubmit { loadEquation() }
-
-                Button(action: loadEquation) {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .font(.system(size: 20))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.accentColor)
-                        .scaleEffect(isLoadHovered ? 1.1 : 1.0)
+        VStack(spacing: spaceSM) {
+            // Main bar
+            HStack(spacing: spaceSM) {
+                BarButton(icon: "xmark", showHoverColor: true) {
+                    NSApplication.shared.terminate(nil)
                 }
-                .buttonStyle(.plain)
-                .disabled(equationInput.isEmpty)
-                .opacity(equationInput.isEmpty ? 0.3 : 1.0)
-                .onHover { isLoadHovered = $0 }
-                .animation(.spring(response: 0.3), value: isLoadHovered)
+
+                BarStatusItem(state: coordinator.recallState)
+
+                HStack(spacing: spaceXS) {
+                    BarButton(icon: "bolt.fill", isActive: isRecalling) {
+                        coordinator.triggerRecallFromUI()
+                    }
+                    .keyboardShortcut(" ", modifiers: .option)
+
+                    BarButton(
+                        icon: "gearshape.fill",
+                        isActive: showSettings,
+                        badgeDot: !coordinator.isAccessibilityGranted
+                    ) {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            showSettings.toggle()
+                        }
+                    }
+                }
+                .padding(spaceXS)
+                .background {
+                    RoundedRectangle(cornerRadius: cornerGroup, style: .continuous)
+                        .fill(.white.opacity(0.06))
+                }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
+            .padding(spaceSM)
+            .background { barBackground }
+            .clipShape(RoundedRectangle(cornerRadius: cornerBar, style: .continuous))
+
+            if isRecalling {
+                recallStrip
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
+                            removal: .opacity.combined(with: .scale(scale: 0.95))
+                        )
                     )
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
 
-            // Status pill
-            StatusPill(state: coordinator.recallState)
-                .padding(.top, 14)
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: coordinator.recallState)
+            if showSettings {
+                settingsStrip
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
+                            removal: .opacity.combined(with: .scale(scale: 0.95))
+                        )
+                    )
+            }
+        }
+        .padding(spaceLG)
+        .animation(.spring(response: 0.4, dampingFraction: 0.78), value: isRecalling)
+        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: showSettings)
+        .fixedSize()
+    }
 
-            // Loaded equation card
-            if !coordinator.currentEquationText.isEmpty {
-                EquationCard(
-                    equation: coordinator.currentEquationText,
-                    isRecallIdle: coordinator.recallState == .idle,
-                    onTrigger: { coordinator.triggerRecallFromUI() }
-                )
-                .transition(.asymmetric(
-                    insertion: .move(edge: .top).combined(with: .opacity),
-                    removal: .opacity
-                ))
-                .padding(.top, 12)
+    // MARK: - Bar Background
+
+    private var barBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerBar, style: .continuous)
+                .fill(.black.opacity(0.5))
+            RoundedRectangle(cornerRadius: cornerBar, style: .continuous)
+                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: cornerBar, style: .continuous)
+                .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
+        }
+        .shadow(color: .black.opacity(0.4), radius: 20, y: 6)
+        .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+    }
+
+    // MARK: - Recall Strip
+
+    private var recallStrip: some View {
+        VStack(alignment: .leading, spacing: spaceSM) {
+            if !coordinator.selectedNodeLabel.isEmpty {
+                HStack(spacing: spaceSM) {
+                    Image(systemName: "scope")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.5))
+                    Text(coordinator.selectedNodeLabel)
+                        .font(.system(.caption, design: .monospaced, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .contentTransition(.numericText())
+                }
             }
 
-            // Navigation state (visible during recall)
-            if coordinator.recallState != .idle {
-                NavigationStateCard(
-                    path: coordinator.currentPath,
-                    selectedLabel: coordinator.selectedNodeLabel,
-                    lastSpoken: coordinator.lastSpokenText
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .padding(.top, 12)
+            if !coordinator.lastSpokenText.isEmpty {
+                HStack(spacing: spaceSM) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.4))
+                    Text(coordinator.lastSpokenText)
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+
+            if !coordinator.currentPath.isEmpty {
+                HStack(spacing: spaceSM) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.3))
+                    Text(coordinator.currentPath.joined(separator: " > "))
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.35))
+                }
+            }
+        }
+        .padding(spaceMD)
+        .frame(maxWidth: 320)
+        .background { stripBackground }
+        .clipShape(RoundedRectangle(cornerRadius: cornerStrip, style: .continuous))
+    }
+
+    // MARK: - Settings Strip
+
+    private var settingsStrip: some View {
+        HStack(spacing: spaceSM) {
+            HStack(spacing: spaceSM) {
+                Circle()
+                    .fill(coordinator.isAccessibilityGranted ? Color.green : Color.orange)
+                    .frame(width: 8, height: 8)
+
+                Text(coordinator.isAccessibilityGranted ? "Accessibility granted" : "Accessibility needed")
+                    .font(.system(.caption, design: .rounded, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
             }
 
             Spacer()
 
-            // Accessibility permission bar — anchored to bottom
-            AccessibilityBar(
-                isGranted: coordinator.isAccessibilityGranted,
-                onGrant: {
+            if coordinator.isAccessibilityGranted {
+                Button("Manage") {
+                    AccessibilityPermission.openSystemSettings()
+                }
+                .font(.system(.caption, design: .rounded, weight: .medium))
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.4))
+            } else {
+                Button(action: {
                     AccessibilityPermission.checkWithPrompt()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         coordinator.recheckAccessibility()
                     }
-                },
-                onManage: {
-                    AccessibilityPermission.openSystemSettings()
-                }
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 14)
-        }
-        .frame(minWidth: 420, minHeight: 320)
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: coordinator.currentEquationText.isEmpty)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: coordinator.recallState != .idle)
-    }
-
-    private func loadEquation() {
-        guard !equationInput.isEmpty else { return }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            coordinator.loadEquationFromUI(equationInput)
-        }
-    }
-}
-
-// MARK: - Status Pill
-
-struct StatusPill: View {
-    let state: RecallState
-
-    @State private var isPulsing = false
-
-    private var statusText: String {
-        switch state {
-        case .idle: return "Idle"
-        case .recallActive: return "Recall Active"
-        case .pathBuilding: return "Path Building"
-        case .nodeResolved: return "Node Selected"
-        case .error(let msg): return msg
-        }
-    }
-
-    private var statusColor: Color {
-        switch state {
-        case .idle: return .secondary
-        case .recallActive, .pathBuilding: return .blue
-        case .nodeResolved: return .green
-        case .error: return .red
-        }
-    }
-
-    private var statusIcon: String {
-        switch state {
-        case .idle: return "circle.fill"
-        case .recallActive: return "antenna.radiowaves.left.and.right"
-        case .pathBuilding: return "arrow.triangle.branch"
-        case .nodeResolved: return "checkmark.circle.fill"
-        case .error: return "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var isActive: Bool {
-        state != .idle
-    }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: statusIcon)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(statusColor)
-                .scaleEffect(isPulsing && isActive ? 1.2 : 1.0)
-
-            Text(statusText)
-                .font(.system(.caption, design: .rounded, weight: .semibold))
-                .foregroundStyle(isActive ? .primary : .secondary)
-                .contentTransition(.numericText())
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background {
-            Capsule()
-                .fill(statusColor.opacity(isActive ? 0.12 : 0.06))
-                .overlay(
-                    Capsule()
-                        .strokeBorder(statusColor.opacity(isActive ? 0.25 : 0.1), lineWidth: 0.5)
-                )
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Status")
-        .accessibilityValue(statusText)
-        .onChange(of: state) { _, newState in
-            if newState != .idle {
-                withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
-                    isPulsing = true
-                }
-            } else {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    isPulsing = false
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Equation Card
-
-struct EquationCard: View {
-    let equation: String
-    let isRecallIdle: Bool
-    let onTrigger: () -> Void
-
-    @State private var isHovered = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label("Loaded Equation", systemImage: "textformat.abc")
-                    .font(.system(.caption, design: .rounded, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-
-            Text(equation)
-                .font(.system(.title3, design: .monospaced, weight: .medium))
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if isRecallIdle {
-                Button(action: onTrigger) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("Trigger Recall")
-                            .font(.system(.caption, design: .rounded, weight: .semibold))
-                        Text("(Option+Space)")
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background {
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                Capsule()
-                                    .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
-                            )
-                    }
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(" ", modifiers: .option)
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
-            }
-        }
-        .padding(14)
-        .background {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(.white.opacity(isHovered ? 0.18 : 0.08), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.08), radius: isHovered ? 12 : 6, y: 2)
-        }
-        .onHover { isHovered = $0 }
-        .animation(.easeOut(duration: 0.25), value: isHovered)
-        .padding(.horizontal, 16)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Loaded equation")
-        .accessibilityValue(equation)
-    }
-}
-
-// MARK: - Navigation State Card
-
-struct NavigationStateCard: View {
-    let path: [String]
-    let selectedLabel: String
-    let lastSpoken: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !path.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.blue)
-                    Text(path.joined(separator: "  >  "))
-                        .font(.system(.caption, design: .monospaced, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Navigation path")
-                .accessibilityValue(path.joined(separator: ", "))
-            }
-
-            if !selectedLabel.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "scope")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.green)
-                    Text(selectedLabel)
-                        .font(.system(.body, design: .monospaced, weight: .semibold))
-                        .contentTransition(.numericText())
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Selected node")
-                .accessibilityValue(selectedLabel)
-            }
-
-            if !lastSpoken.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "speaker.wave.2.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.purple)
-                    Text(lastSpoken)
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .italic()
-                        .contentTransition(.numericText())
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Last announcement")
-                .accessibilityValue(lastSpoken)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(.blue.opacity(0.15), lineWidth: 0.5)
-                )
-        }
-        .padding(.horizontal, 16)
-    }
-}
-
-// MARK: - Accessibility Bar
-
-struct AccessibilityBar: View {
-    let isGranted: Bool
-    let onGrant: () -> Void
-    let onManage: () -> Void
-
-    @State private var checkmarkScale: CGFloat = 1.0
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(isGranted ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
-                    .frame(width: 28, height: 28)
-
-                Image(systemName: isGranted
-                      ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(isGranted ? .green : .orange)
-                    .scaleEffect(checkmarkScale)
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Accessibility")
-                    .font(.system(.caption, design: .rounded, weight: .semibold))
-                Text(isGranted
-                     ? "Screen reading & global hotkey enabled"
-                     : "Required for screen reading & global hotkey")
-                    .font(.system(.caption2, design: .rounded))
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-
-            if isGranted {
-                Button("Manage") { onManage() }
-                    .font(.system(.caption, design: .rounded, weight: .medium))
-                    .controlSize(.small)
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-            } else {
-                Button(action: onGrant) {
-                    Text("Grant Access")
+                }) {
+                    Text("Grant")
                         .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.8))
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
+                        .padding(.vertical, spaceXS)
                         .background {
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    Capsule()
-                                        .strokeBorder(.orange.opacity(0.3), lineWidth: 0.5)
-                                )
+                            Capsule().fill(.white.opacity(0.1))
                         }
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isGranted
-                      ? Color.green.opacity(0.04)
-                      : Color.orange.opacity(0.04))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(
-                            (isGranted ? Color.green : Color.orange).opacity(0.12),
-                            lineWidth: 0.5
-                        )
-                )
+        .padding(spaceMD)
+        .frame(minWidth: 220)
+        .background { stripBackground }
+        .clipShape(RoundedRectangle(cornerRadius: cornerStrip, style: .continuous))
+    }
+
+    private var stripBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerStrip, style: .continuous)
+                .fill(.black.opacity(0.4))
+            RoundedRectangle(cornerRadius: cornerStrip, style: .continuous)
+                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: cornerStrip, style: .continuous)
+                .strokeBorder(.white.opacity(0.06), lineWidth: 0.5)
         }
-        .onChange(of: isGranted) { _, granted in
-            if granted {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
-                    checkmarkScale = 1.3
+        .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+    }
+}
+
+// MARK: - Bar Button
+
+struct BarButton: View {
+    let icon: String
+    var showHoverColor: Bool = false
+    var isActive: Bool = false
+    var badgeDot: Bool = false
+    let action: () -> Void
+
+    @State private var isHovered = false
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                isPressed = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    isPressed = false
                 }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.5).delay(0.15)) {
-                    checkmarkScale = 1.0
+            }
+            action()
+        }) {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(
+                        showHoverColor && isHovered
+                            ? Color.red
+                            : .white.opacity(isActive ? 1.0 : isHovered ? 0.9 : 0.55)
+                    )
+                    .frame(width: 40, height: 40)
+                    .background {
+                        RoundedRectangle(cornerRadius: cornerButton, style: .continuous)
+                            .fill(isHovered ? .white.opacity(0.08) : .clear)
+                    }
+                    .scaleEffect(isPressed ? 0.88 : isHovered ? 1.06 : 1.0)
+
+                if badgeDot {
+                    Circle()
+                        .fill(.orange)
+                        .frame(width: 7, height: 7)
+                        .offset(x: 1, y: 2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
+    }
+}
+
+// MARK: - Bar Status Item
+
+struct BarStatusItem: View {
+    let state: RecallState
+    @State private var isPulsing = false
+
+    private var statusText: String {
+        switch state {
+        case .idle: return "Idle"
+        case .recallActive: return "Active"
+        case .pathBuilding: return "Building"
+        case .nodeResolved: return "Selected"
+        case .error: return "Error"
+        }
+    }
+
+    private var statusColor: Color {
+        switch state {
+        case .idle: return .gray
+        case .recallActive, .pathBuilding: return .green
+        case .nodeResolved: return .green
+        case .error: return .red
+        }
+    }
+
+    private var isActive: Bool { state != .idle }
+
+    var body: some View {
+        VStack(spacing: 3) {
+            ZStack {
+                if isActive {
+                    Circle()
+                        .fill(statusColor.opacity(0.2))
+                        .frame(width: 18, height: 18)
+                        .scaleEffect(isPulsing ? 1.5 : 1.0)
+                        .opacity(isPulsing ? 0.0 : 0.6)
+                }
+
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 10, height: 10)
+                    .shadow(color: isActive ? statusColor.opacity(0.6) : .clear, radius: 5)
+            }
+
+            Text(statusText)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.5))
+                .contentTransition(.numericText())
+        }
+        .frame(width: 48, height: 40)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Status")
+        .accessibilityValue(statusText)
+        .onChange(of: state) { _, newState in
+            if newState != .idle {
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false)) {
+                    isPulsing = true
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    isPulsing = false
                 }
             }
         }

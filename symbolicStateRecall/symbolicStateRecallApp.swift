@@ -12,9 +12,9 @@ struct symbolicStateRecallApp: App {
     @NSApplicationDelegateAdaptor(AppCoordinator.self) var coordinator
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(coordinator)
+        // Empty Settings scene — the floating panel is managed by AppCoordinator
+        Settings {
+            EmptyView()
         }
     }
 }

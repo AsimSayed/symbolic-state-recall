@@ -30,6 +30,7 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
 
     // MARK: - Private
 
+    private var floatingPanel: FloatingPanel?
     private var eventTap: CFMachPort?
     private var eventTapRunLoopSource: CFRunLoopSource?
     private var localKeyMonitor: Any?
@@ -63,6 +64,47 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
 
         // Track frontmost app changes so we can read from the last external app
         startTrackingFrontmostApp()
+
+        // Show the floating bar
+        showFloatingBar()
+    }
+
+    // MARK: - Floating Panel
+
+    private func showFloatingBar() {
+        let barView = ContentView()
+            .environmentObject(self)
+
+        let hostingView = NSHostingView(rootView: barView)
+        hostingView.wantsLayer = true
+        hostingView.layer?.backgroundColor = .clear
+
+        let fittingSize = hostingView.fittingSize
+        let panel = FloatingPanel(
+            contentRect: NSRect(origin: .zero, size: fittingSize),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: true
+        )
+        panel.contentView = hostingView
+
+        // Position: center-bottom of main screen
+        if let screen = NSScreen.main {
+            let screenFrame = screen.visibleFrame
+            let x = screenFrame.midX - fittingSize.width / 2
+            let y = screenFrame.minY + 60
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
+        }
+
+        panel.orderFrontRegardless()
+        floatingPanel = panel
+
+        // Close any default SwiftUI windows
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            for window in NSApplication.shared.windows where !(window is FloatingPanel) {
+                window.close()
+            }
+        }
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
