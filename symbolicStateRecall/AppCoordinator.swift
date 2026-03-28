@@ -92,16 +92,22 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         panel.contentView = hostingView
 
         // Position: top-right of main screen
-        if let screen = NSScreen.main {
-            let screenFrame = screen.visibleFrame
-            let margin: CGFloat = 16
-            let x = screenFrame.maxX - fittingSize.width - margin
-            let y = screenFrame.maxY - fittingSize.height - margin
-            panel.setFrameOrigin(NSPoint(x: x, y: y))
-        }
+        pinPanelTopRight(panel, size: fittingSize)
 
         panel.orderFrontRegardless()
         floatingPanel = panel
+
+        // Re-anchor top-right whenever content resizes
+        hostingView.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            forName: NSView.frameDidChangeNotification,
+            object: hostingView,
+            queue: .main
+        ) { [weak self, weak panel, weak hostingView] _ in
+            guard let panel = panel, let hostingView = hostingView else { return }
+            let newSize = hostingView.fittingSize
+            self?.pinPanelTopRight(panel, size: newSize)
+        }
 
         // Close any default SwiftUI windows
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -109,6 +115,18 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
                 window.close()
             }
         }
+    }
+
+    private func pinPanelTopRight(_ panel: NSPanel, size: NSSize) {
+        guard let screen = NSScreen.main else { return }
+        let screenFrame = screen.visibleFrame
+        let margin: CGFloat = 16
+        let x = screenFrame.maxX - size.width - margin
+        let y = screenFrame.maxY - size.height - margin
+        panel.setFrame(
+            NSRect(x: x, y: y, width: size.width, height: size.height),
+            display: true
+        )
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
@@ -148,7 +166,7 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
 
-    /// Reload a previously used equation from history.
+    /// Reload a previously used equation from history and enter recall.
     func loadRecentEquation(_ text: String) {
         do {
             if text.contains("\n") {
@@ -158,6 +176,12 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
             }
             recordEquation(text)
             speech.speak("Equation loaded")
+            // Enter recall mode if idle
+            if engine.state == .idle {
+                installKeyMonitors()
+                engine.trigger()
+            }
+            updatePublishedState()
         } catch {
             speech.speak("Could not parse equation")
         }
@@ -179,11 +203,21 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     func triggerRecallFromUI() {
-        if engine.state == .idle {
-            // Try reading from the last external app (since SSR is now focused)
-            tryReadFromLastExternalApp()
-            installKeyMonitors()
+        if engine.state != .idle {
+            engine.trigger()  // toggle off
+            cleanupAllMonitors()
+            updatePublishedState()
+            return
         }
+
+        // Always fresh-read before entering recall
+        if let text = focusedTextReader.readFocusedTextSync(), !text.isEmpty {
+            loadFocusedText(text)
+        } else {
+            tryReadFromLastExternalApp()
+        }
+
+        installKeyMonitors()
         engine.trigger()
         updatePublishedState()
     }
