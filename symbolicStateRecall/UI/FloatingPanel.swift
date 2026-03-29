@@ -47,3 +47,18 @@ class FloatingPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 }
+
+// MARK: - Auto-Resizing Hosting View
+
+/// NSHostingView subclass that resizes its window to match SwiftUI content.
+class AutoResizingHostingView<Content: View>: NSHostingView<Content> {
+    var onLayoutChange: ((NSSize) -> Void)?
+
+    override func layout() {
+        super.layout()
+        let ideal = fittingSize
+        if ideal != window?.frame.size {
+            onLayoutChange?(ideal)
+        }
+    }
+}

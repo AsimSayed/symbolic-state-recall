@@ -67,31 +67,16 @@ struct ContentView: View {
 
             if isRecalling {
                 recallStrip
-                    .transition(
-                        .asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
-                            removal: .opacity.combined(with: .scale(scale: 0.95))
-                        )
-                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .topTrailing)))
             }
 
             if showSettings {
                 settingsStrip
-                    .transition(
-                        .asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
-                            removal: .opacity.combined(with: .scale(scale: 0.95))
-                        )
-                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .topTrailing)))
 
                 if !coordinator.recentEquations.isEmpty {
                     recentStrip
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)),
-                                removal: .opacity.combined(with: .scale(scale: 0.95))
-                            )
-                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .topTrailing)))
                 }
             }
         }
@@ -155,7 +140,7 @@ struct ContentView: View {
             }
         }
         .padding(spaceMD)
-        .frame(maxWidth: 320)
+        .frame(maxWidth: 320, alignment: .leading)
         .background { stripBackground }
         .clipShape(RoundedRectangle(cornerRadius: cornerStrip, style: .continuous))
     }
@@ -272,11 +257,11 @@ struct BarButton: View {
 
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+            withAnimation(.easeIn(duration: 0.1)) {
                 isPressed = true
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeOut(duration: 0.15)) {
                     isPressed = false
                 }
             }
@@ -296,7 +281,7 @@ struct BarButton: View {
                         RoundedRectangle(cornerRadius: cornerButton, style: .continuous)
                             .fill(isActive ? .white.opacity(0.12) : isHovered ? .white.opacity(0.08) : .clear)
                     }
-                    .scaleEffect(isPressed ? 0.88 : isHovered ? 1.06 : 1.0)
+                    .scaleEffect(isPressed ? 0.93 : 1.0)
 
                 if badgeDot {
                     Circle()
@@ -308,7 +293,7 @@ struct BarButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovered)
+        .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 }
 
@@ -317,14 +302,15 @@ struct BarButton: View {
 struct BarStatusItem: View {
     let state: RecallState
     @State private var isPulsing = false
+    @State private var dotScale: CGFloat = 1.0
 
     private var statusText: String {
         switch state {
-        case .idle: return "Idle"
-        case .recallActive: return "Active"
-        case .pathBuilding: return "Building"
-        case .nodeResolved: return "Selected"
-        case .error: return "Error"
+        case .idle: return "IDLE"
+        case .recallActive: return "ACTIVE"
+        case .pathBuilding: return "READING"
+        case .nodeResolved: return "SELECTED"
+        case .error: return "ERROR"
         }
     }
 
@@ -340,34 +326,49 @@ struct BarStatusItem: View {
     private var isActive: Bool { state != .idle }
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
+            Spacer(minLength: 0)
+
             ZStack {
                 if isActive {
                     Circle()
-                        .fill(statusColor.opacity(0.2))
-                        .frame(width: 18, height: 18)
-                        .scaleEffect(isPulsing ? 1.5 : 1.0)
-                        .opacity(isPulsing ? 0.0 : 0.6)
+                        .fill(statusColor.opacity(0.15))
+                        .frame(width: 16, height: 16)
+                        .scaleEffect(isPulsing ? 1.3 : 1.0)
+                        .opacity(isPulsing ? 0.0 : 0.5)
                 }
 
                 Circle()
                     .fill(statusColor)
-                    .frame(width: 10, height: 10)
-                    .shadow(color: isActive ? statusColor.opacity(0.6) : .clear, radius: 5)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: isActive ? statusColor.opacity(0.4) : .clear, radius: 4)
+                    .scaleEffect(dotScale)
             }
 
             Text(statusText)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.5))
+                .font(.system(size: 9, weight: .regular, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.45))
                 .contentTransition(.numericText())
+
+            Spacer(minLength: 0)
         }
-        .frame(width: 48, height: 40)
+        .frame(width: 52, height: 40)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Status")
         .accessibilityValue(statusText)
         .onChange(of: state) { _, newState in
+            // Spot pop on every state change
+            withAnimation(.easeOut(duration: 0.1)) {
+                dotScale = 1.4
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    dotScale = 1.0
+                }
+            }
+
             if newState != .idle {
-                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false)) {
+                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: false)) {
                     isPulsing = true
                 }
             } else {
@@ -376,6 +377,7 @@ struct BarStatusItem: View {
                 }
             }
         }
+        .animation(.easeOut(duration: 0.2), value: statusColor)
     }
 }
 

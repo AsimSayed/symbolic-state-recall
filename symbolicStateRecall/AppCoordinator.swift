@@ -78,7 +78,7 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         let barView = ContentView()
             .environmentObject(self)
 
-        let hostingView = NSHostingView(rootView: barView)
+        let hostingView = AutoResizingHostingView(rootView: barView)
         hostingView.wantsLayer = true
         hostingView.layer?.backgroundColor = .clear
 
@@ -97,15 +97,9 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
         panel.orderFrontRegardless()
         floatingPanel = panel
 
-        // Re-anchor top-right whenever content resizes
-        hostingView.postsFrameChangedNotifications = true
-        NotificationCenter.default.addObserver(
-            forName: NSView.frameDidChangeNotification,
-            object: hostingView,
-            queue: .main
-        ) { [weak self, weak panel, weak hostingView] _ in
-            guard let panel = panel, let hostingView = hostingView else { return }
-            let newSize = hostingView.fittingSize
+        // Re-anchor top-right whenever SwiftUI layout changes
+        hostingView.onLayoutChange = { [weak self, weak panel] newSize in
+            guard let panel = panel else { return }
             self?.pinPanelTopRight(panel, size: newSize)
         }
 
@@ -210,12 +204,8 @@ class AppCoordinator: NSObject, NSApplicationDelegate, ObservableObject {
             return
         }
 
-        // Always fresh-read before entering recall
-        if let text = focusedTextReader.readFocusedTextSync(), !text.isEmpty {
-            loadFocusedText(text)
-        } else {
-            tryReadFromLastExternalApp()
-        }
+        // UI trigger means SSR is focused — read from last external app only
+        tryReadFromLastExternalApp()
 
         installKeyMonitors()
         engine.trigger()
@@ -592,20 +582,8 @@ extension AppCoordinator: FocusedTextReaderDelegate {
 
 extension AppCoordinator: ClipboardMonitorDelegate {
     func clipboardMonitor(_ monitor: ClipboardMonitor, didDetectText text: String) {
-        do {
-            if text.contains("\n") {
-                try engine.loadMultiLine(equations: text)
-            } else {
-                try engine.load(equation: text)
-            }
-            recordEquation(text)
-            speech.speak("Equation loaded")
-        } catch {
-            // Keep previously loaded equation — silent on failure
-            #if DEBUG
-            print("📋 Clipboard text not parseable as math: \(error)")
-            #endif
-        }
+        // Route through the same pipeline as screen reading
+        loadFocusedText(text)
     }
 
     func clipboardMonitor(_ monitor: ClipboardMonitor, didFailWithError error: Error) {
