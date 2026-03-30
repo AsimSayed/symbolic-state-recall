@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SymbolicStateRecall — Structural Math Navigation for Screen Readers</title>
+<meta name="description" content="A macOS tool that lets blind and visually impaired users navigate, query, and extract parts of mathematical expressions using tree-based recall.">
+<meta property="og:title" content="SymbolicStateRecall — Reach Into Equations">
+<meta property="og:description" content="The first tool that lets screen reader users structurally navigate math. Not linearly. Structurally.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════
+   FONTS — Geist (body) + Geist Mono (labels)
+   ════════════════════════════════════════════ */
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+
+/* ════════════════════════════════════════════
+   TOKENS
+   ════════════════════════════════════════════ */
+:root {
+  --bg: #0a0c10;
+  --bg-deep: #060810;
+  --bg-raised: #12151c;
+  --bg-surface: #1a1e28;
+  --text: #e4e8f0;
+  --text-2: #8a92a4;
+  --text-3: #4a5068;
+  --blue: #5ea6ff;
+  --blue-dim: rgba(94,166,255,.12);
+  --blue-glow: rgba(94,166,255,.06);
+  --green: #34d399;
+  --red: #f87171;
+  --border: rgba(255,255,255,.08);
+  --border-bright: rgba(255,255,255,.15);
+  --font: 'Geist', -apple-system, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+[data-theme="light"] {
+  --bg: #f4f5f7;
+  --bg-deep: #e8eaef;
+  --bg-raised: #fff;
+  --bg-surface: #dde0e6;
+  --text: #141820;
+  --text-2: #5a6278;
+  --text-3: #9aa0b0;
+  --blue: #2b7de9;
+  --blue-dim: rgba(43,125,233,.1);
+  --blue-glow: rgba(43,125,233,.06);
+  --green: #16a34a;
+  --red: #dc2626;
+  --border: rgba(0,0,0,.08);
+  --border-bright: rgba(0,0,0,.15);
+}
+
+/* ════════════════════════════════════════════
+   BASE
+   ═══════════════════════════��════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-family:var(--font);scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);
+  font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;transition:background .3s ease,color .3s ease}
+button,input,select,textarea{font-family:inherit}
+::selection{background:var(--blue);color:#fff}
+a{color:inherit;text-decoration:none}
+
+/* Noise grain */
+body::after{content:"";position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:9999;opacity:.03;mix-blend-mode:screen;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 48px}
+
+/* ════════════════════════════════════════════
+   NAV
+   ════════════════════════════════════════════ */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(10,12,16,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border)}
+[data-theme="light"] nav{background:rgba(244,245,247,.92)}
+.nav-in{max-width:1120px;margin:0 auto;padding:0 48px;
+  display:flex;justify-content:space-between;align-items:center;height:56px}
+.nav-logo{font-family:var(--mono);font-size:15px;font-weight:500;
+  color:var(--blue);letter-spacing:.04em}
+.nav-logo span{color:var(--text-3);font-weight:400}
+.nav-r{display:flex;align-items:center;gap:28px;font-size:13px;
+  font-family:var(--mono);color:var(--text-2)}
+.nav-r a{transition:color .2s}
+.nav-r a:hover{color:var(--blue)}
+.nav-cta{background:var(--blue);color:#fff;border:none;
+  padding:8px 20px;font-family:var(--mono);font-size:12px;
+  font-weight:500;letter-spacing:.04em;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
+.nav-cta:hover{box-shadow:0 0 20px var(--blue-dim);transform:translateY(-1px)}
+
+/* Theme toggle */
+.theme-tog{display:flex;align-items:center;background:var(--bg-deep);
+  border:1px solid var(--border);overflow:hidden}
+.theme-tog button{background:none;border:none;border-right:1px solid var(--border);
+  padding:6px 10px;cursor:pointer;color:var(--text-3);transition:all .2s;
+  font-family:var(--mono);font-size:10px;letter-spacing:.04em;display:flex;
+  align-items:center;justify-content:center;width:32px;height:28px}
+.theme-tog button:last-child{border-right:none}
+.theme-tog button.active{background:var(--blue-dim);color:var(--blue)}
+.theme-tog button:hover:not(.active){color:var(--text-2)}
+
+/* Mobile nav */
+.nav-hamburger{display:none;background:none;border:none;cursor:pointer;
+  width:24px;height:24px;position:relative;flex-shrink:0}
+.nav-hamburger span{position:absolute;left:3px;width:18px;height:1.5px;
+  background:var(--text);transition:translate .2s,rotate .2s .2s}
+.nav-hamburger span:nth-child(1){translate:0 -5.5px}
+.nav-hamburger span:nth-child(3){translate:0 5.5px}
+.nav-hamburger.open span:nth-child(1){translate:0 0;rotate:45deg}
+.nav-hamburger.open span:nth-child(2){opacity:0}
+.nav-hamburger.open span:nth-child(3){translate:0 0;rotate:-45deg}
+
+.mobile-menu{position:fixed;top:56px;left:0;right:0;bottom:0;
+  background:var(--bg);z-index:99;padding:32px 24px;
+  display:flex;flex-direction:column;gap:24px;
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.mobile-menu.open{transform:translateX(0)}
+.mobile-menu a{font-family:'Space Grotesk',sans-serif;font-size:36px;
+  letter-spacing:-0.01em;color:var(--text);transition:color .2s;display:block}
+.mobile-menu a:hover{color:var(--blue)}
+
+/* ══��═════════════════════════���═══════════════
+   HERO
+   ═════════════════════���══════════════════════ */
+.hero{padding:160px 0 80px;position:relative}
+.hero::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:800px;height:600px;
+  background:radial-gradient(ellipse,rgba(94,166,255,.06) 0%,transparent 70%);
+  pointer-events:none}
+.hero-label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:24px;
+  display:flex;align-items:center;gap:8px}
+.hero-label::before{content:"";width:12px;height:1px;background:var(--blue)}
+.hero h1{font-family:'Space Grotesk',sans-serif;font-weight:700;
+  font-size:clamp(52px,10vw,96px);line-height:0.92;
+  letter-spacing:-0.03em;margin-bottom:24px;max-width:800px}
+.hero h1 .dim{color:var(--text-3)}
+.hero h1 .accent{color:var(--blue)}
+.hero-sub{font-size:19px;line-height:1.6;color:var(--text-2);
+  max-width:560px;margin-bottom:40px}
+.hero-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.btn-blue{background:var(--blue);color:#fff;border:none;
+  padding:14px 32px;font-family:var(--mono);font-size:13px;
+  font-weight:500;letter-spacing:.04em;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block}
+.btn-blue:hover{box-shadow:0 0 30px var(--blue-dim);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text-2);
+  border:1px solid var(--border);padding:14px 32px;
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;
+  transition:all .2s;text-decoration:none;display:inline-block}
+.btn-ghost:hover{border-color:var(--text-2);color:var(--text)}
+.hero-note{font-family:var(--mono);font-size:11px;color:var(--text-3);
+  letter-spacing:.04em}
+
+/* ════════════════════════════════════════════
+   TERMINAL — Signature product visualization
+   ══════════════════════���═════════════════════ */
+.terminal{background:var(--bg-deep);border:1px solid var(--border);
+  margin-top:64px;overflow:hidden;position:relative;
+  box-shadow:0 40px 120px rgba(0,0,0,.4)}
+.terminal-bar{height:36px;background:var(--bg-raised);
+  border-bottom:1px solid var(--border);display:flex;
+  align-items:center;padding:0 16px;gap:8px}
+.terminal-dot{width:8px;height:8px;border-radius:50%}
+.terminal-dot.r{background:#ff5f57}
+.terminal-dot.y{background:#febc2e}
+.terminal-dot.g{background:#28c840}
+.terminal-title{margin-left:12px;font-family:var(--mono);font-size:11px;
+  color:var(--text-3);letter-spacing:.04em}
+.terminal-body{padding:32px;font-family:var(--mono);font-size:13px;
+  line-height:2;color:var(--text-2);overflow-x:auto;min-height:280px}
+.terminal-body .cmd{color:var(--text)}
+.terminal-body .out{color:var(--text-2)}
+.terminal-body .hl{color:var(--blue);font-weight:500}
+.terminal-body .ok{color:var(--green)}
+.terminal-body .dim{color:var(--text-3)}
+.terminal-body .speech{color:var(--green);font-style:italic}
+
+/* Scanline effect */
+.terminal::after{content:"";position:absolute;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue-glow),transparent);
+  animation:scanline 6s ease-in-out infinite;pointer-events:none;opacity:.4}
+@keyframes scanline{0%{top:36px}100%{top:100%}}
+
+/* ════════════════════════════════════════════
+   SECTIONS — shared
+   ════════════════════════════════════════════ */
+.sec{padding:96px 0}
+.sec-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:20px;
+  display:flex;align-items:center;gap:8px}
+.sec-label::before{content:"";width:12px;height:1px;background:var(--blue)}
+.sec h2{font-family:'Space Grotesk',sans-serif;font-weight:700;
+  font-size:clamp(36px,5vw,52px);line-height:0.95;
+  letter-spacing:-0.02em;margin-bottom:16px}
+.sec p.desc{font-size:17px;line-height:1.7;color:var(--text-2);max-width:600px}
+.sec p.desc strong{color:var(--text);font-weight:500}
+
+/* ════════════════════════════════════════════
+   PROBLEM GRID
+   ════════════════════════════════════════════ */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:48px}
+.problem-card{background:var(--bg-deep);border:1px solid var(--border);padding:32px}
+.problem-card h3{font-family:var(--mono);font-size:13px;font-weight:500;
+  letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px}
+.problem-card.without h3{color:var(--red)}
+.problem-card.with h3{color:var(--blue)}
+.problem-card p{font-size:15px;color:var(--text-2);line-height:1.7}
+.problem-card ul{list-style:none;font-size:14px;color:var(--text-2)}
+.problem-card li{padding:8px 0;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.problem-card li:last-child{border:none}
+.problem-card.without li::before{content:"\2715";color:var(--red);font-size:11px;
+  font-weight:700;flex-shrink:0;margin-top:3px}
+.problem-card.with li::before{content:"\2713";color:var(--blue);font-size:11px;
+  font-weight:700;flex-shrink:0;margin-top:3px}
+.problem-stat{text-align:center;padding:48px;border:1px solid var(--border);
+  background:var(--bg-deep);grid-column:span 2}
+.problem-stat .big{font-family:'Space Grotesk',sans-serif;font-size:96px;
+  letter-spacing:-0.04em;
+  background:linear-gradient(135deg,var(--blue),#a78bfa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.problem-stat .label{font-family:var(--mono);font-size:12px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-top:8px}
+
+/* ════════════════════════════════════════════
+   PIPELINE STEPS
+   ════════════════════════════════════════════ */
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:48px}
+.step{background:var(--bg-deep);border:1px solid var(--border);padding:28px;
+  position:relative;transition:border-color .2s}
+.step:hover{border-color:var(--blue);box-shadow:0 0 24px var(--blue-dim)}
+.step-num{font-family:var(--mono);font-size:10px;font-weight:500;
+  letter-spacing:.08em;color:var(--blue);margin-bottom:12px}
+.step-icon{width:40px;height:40px;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;color:var(--blue)}
+.step h3{font-size:17px;font-weight:600;margin-bottom:6px;letter-spacing:-0.01em}
+.step p{font-size:13px;color:var(--text-2);line-height:1.6}
+.step-arrow{position:absolute;right:-10px;top:50%;transform:translateY(-50%);
+  color:var(--text-3);z-index:2;font-size:14px}
+
+/* ════════════════════════════════════════════
+   FEATURE GRID
+   ═════════════��══════════════════════════════ */
+.features{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:48px}
+.feature{background:var(--bg-deep);border:1px solid var(--border);padding:28px;
+  transition:border-color .2s}
+.feature:hover{border-color:var(--blue)}
+.feature-label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:8px}
+.feature h3{font-size:18px;font-weight:600;margin-bottom:6px;letter-spacing:-0.01em}
+.feature p{font-size:14px;color:var(--text-2);line-height:1.6}
+.feature-code{font-family:var(--mono);font-size:12px;color:var(--text-3);
+  margin-top:10px;padding:10px 14px;background:var(--bg);
+  border:1px solid var(--border)}
+
+/* ════════════════════════════════════════════
+   ARCHITECTURE BLOCK
+   ════════════════════════════════════════════ */
+.arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;
+  margin-top:48px;align-items:start}
+.arch-diagram{background:var(--bg-deep);border:1px solid var(--border);
+  padding:32px;font-family:var(--mono);font-size:13px;line-height:2.2;
+  color:var(--text-2)}
+.arch-diagram .layer{color:var(--text);font-weight:500}
+.arch-diagram .component{color:var(--blue)}
+.arch-diagram .note{color:var(--text-3)}
+
+.arch-specs{display:flex;flex-direction:column;gap:2px}
+.spec-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:14px 0;border-bottom:1px solid var(--border)}
+.spec-row:first-child{border-top:1px solid var(--border)}
+.spec-key{font-family:var(--font);font-size:15px;font-weight:500;color:var(--text)}
+.spec-val{font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-2);flex-shrink:0}
+
+/* ════════════════════════════════════════════
+   STATS BAR
+   ═════════════════��══════════════════════════ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.stat{padding:32px;text-align:center;background:var(--bg-deep);
+  border-left:1px solid var(--border)}
+.stat:first-child{border-left:none}
+.stat-val{font-family:'Space Grotesk',sans-serif;font-size:48px;line-height:1;
+  color:var(--blue);margin-bottom:4px}
+.stat-label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-3)}
+
+/* ════════════════════════════════════════════
+   ABOUT
+   ════════════════════════════════════════════ */
+.about-grid{display:grid;grid-template-columns:1fr 2fr;gap:48px;
+  margin-top:48px;align-items:start}
+.about-card{background:var(--bg-deep);border:1px solid var(--border);padding:32px}
+.about-name{font-family:'Space Grotesk',sans-serif;font-size:36px;
+  letter-spacing:-0.02em;margin-bottom:4px}
+.about-role{font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:16px}
+.about-bio{font-size:15px;line-height:1.7;color:var(--text-2)}
+.about-links{margin-top:20px;display:flex;gap:16px}
+.about-links a{font-family:var(--mono);font-size:12px;color:var(--text-3);
+  letter-spacing:.04em;transition:color .2s}
+.about-links a:hover{color:var(--blue)}
+
+.roadmap{display:flex;flex-direction:column;gap:2px}
+.roadmap-item{background:var(--bg-deep);border:1px solid var(--border);
+  padding:20px 24px;display:flex;justify-content:space-between;
+  align-items:center;gap:16px}
+.roadmap-name{font-size:15px;font-weight:500}
+.roadmap-status{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;flex-shrink:0}
+.roadmap-status.done{color:var(--green)}
+.roadmap-status.active{color:var(--blue)}
+.roadmap-status.planned{color:var(--text-3)}
+
+/* ════════════════════════════════════════════
+   QUOTE
+   ════════════════════════════════════════════ */
+.quote-block{padding:48px 0;text-align:center}
+.quote-text{font-size:clamp(22px,3vw,32px);font-weight:500;line-height:1.4;
+  letter-spacing:-0.01em;max-width:720px;margin:0 auto;
+  color:var(--text)}
+.quote-attr{font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-3);margin-top:20px}
+
+/* ════════════════════════════════════════════
+   CROSSROADS CTA
+   ═══════════════��════════════════════════════ */
+.crossroads{padding:96px 0;background:var(--bg-deep);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden}
+.crossroads::before{content:"";position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);width:600px;height:600px;
+  background:radial-gradient(circle,var(--blue-glow),transparent 70%);
+  pointer-events:none}
+.cross-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:0;
+  margin-top:48px;align-items:stretch}
+.cross-card{background:var(--bg);border:1px solid var(--border);padding:40px}
+.cross-badge{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;margin-bottom:20px}
+.cross-card.without .cross-badge{color:var(--red)}
+.cross-card.with .cross-badge{color:var(--blue)}
+.cross-title{font-size:20px;font-weight:600;margin-bottom:16px;
+  letter-spacing:-0.01em;line-height:1.3}
+.cross-list{font-size:14px;line-height:2;color:var(--text-2)}
+.cross-or{display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-3);padding:0 24px;
+  background:var(--bg-deep);border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border)}
+
+/* ═════════════════════════���══════════════════
+   FOOTER
+   ════════════════════���═══════════════════════ */
+.footer-session{padding:48px 0;background:var(--bg-deep)}
+.session-header{font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--blue);text-align:center;margin-bottom:24px}
+.session-feed{max-width:640px;margin:0 auto;font-family:var(--mono);font-size:12px;
+  line-height:1.8;border:1px solid var(--border);background:var(--bg)}
+.feed-line{padding:8px 16px;border-bottom:1px solid var(--border);
+  display:flex;gap:12px;align-items:baseline}
+.feed-line:last-child{border:none}
+.feed-line .key{color:var(--text-3);flex-shrink:0;min-width:80px}
+.feed-line .val{color:var(--text-2)}
+.feed-line .val.hl{color:var(--blue)}
+.feed-line .val.ok{color:var(--green)}
+
+.footer-bottom{border-top:1px solid var(--border);padding:24px 0;
+  background:var(--bg-deep)}
+.footer-in{display:grid;grid-template-columns:1fr auto 1fr;
+  align-items:center;font-family:var(--mono);font-size:11px}
+.footer-copy{color:var(--text-3)}
+.footer-brand{color:var(--blue);font-weight:500;font-size:14px;letter-spacing:.04em}
+.footer-links{display:flex;gap:20px;justify-content:flex-end}
+.footer-links a{color:var(--text-3);transition:color .2s}
+.footer-links a:hover{color:var(--blue)}
+
+/* ══════════════════════════════��═════════════
+   ANIMATIONS
+   ═══════════════════════��════════════════════ */
+.rv{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.rv.vis{opacity:1;transform:translateY(0)}
+.rv.d1{transition-delay:.08s}
+.rv.d2{transition-delay:.16s}
+.rv.d3{transition-delay:.24s}
+.rv.d4{transition-delay:.32s}
+
+/* Code typing */
+.code-line{opacity:0;transform:translateX(-4px);
+  transition:opacity .4s ease,transform .4s ease}
+.code-line.typed{opacity:1;transform:translateX(0)}
+
+/* Pulse dot */
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--green);margin-right:6px;
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ════════════════════════════════════════════
+   SCROLLYTELLING
+   ════════════════════════════════════════════ */
+.scroll-section{padding:120px 0;border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);position:relative}
+.scroll-layout{display:grid;grid-template-columns:1fr 1fr;gap:64px;min-height:200vh}
+.scroll-sticky{position:sticky;top:100px;height:calc(100vh - 160px);
+  display:flex;align-items:center;justify-content:center}
+.scroll-sticky-inner{width:100%;height:100%;max-height:560px;
+  background:var(--bg-deep);border:1px solid var(--border);
+  position:relative;overflow:hidden;
+  box-shadow:0 20px 80px rgba(0,0,0,.4)}
+/* Grid overlay on sticky panel */
+.scroll-sticky-inner::before{content:"";position:absolute;top:0;left:0;right:0;bottom:0;
+  background-image:
+    linear-gradient(rgba(94,166,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(94,166,255,.03) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:1}
+.scroll-steps{display:flex;flex-direction:column;gap:48px;padding:120px 0}
+.scroll-step{padding:40px;border:1px solid var(--border);background:var(--bg-deep);
+  opacity:.3;transform:translateY(8px);min-height:280px;
+  transition:opacity .5s ease,transform .5s ease,border-color .5s ease}
+.scroll-step.active{opacity:1;transform:translateY(0);border-color:var(--blue);
+  box-shadow:0 0 32px var(--blue-dim)}
+.scroll-step-num{font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+.scroll-step h3{font-size:24px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px}
+.scroll-step p{font-size:15px;color:var(--text-2);line-height:1.7}
+.scroll-step .step-key{display:inline-block;font-family:var(--mono);font-size:11px;
+  padding:4px 10px;background:var(--blue-dim);color:var(--blue);
+  letter-spacing:.04em;margin-top:14px;border:1px solid rgba(94,166,255,.15)}
+
+/* SVG visualization layers */
+.viz-layer{position:absolute;top:0;left:0;width:100%;height:100%;
+  transition:opacity .6s ease,transform .6s ease}
+.viz-layer.hidden{opacity:0;transform:scale(.96)}
+.viz-layer.visible{opacity:1;transform:scale(1)}
+.viz-layer svg{width:100%;height:100%}
+
+/* SVG animation keyframes */
+@keyframes node-pulse{0%,100%{opacity:.6;r:4}50%{opacity:1;r:6}}
+@keyframes branch-grow{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+@keyframes speech-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow-breathe{0%,100%{opacity:.15}50%{opacity:.4}}
+@keyframes float-node{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes extract-pulse{0%{r:8;opacity:1}50%{r:14;opacity:.4}100%{r:8;opacity:1}}
+
+/* ════════════════════════════════════════════
+   ANIMATED AST DIAGRAM (standalone)
+   ════════════════════════════════════════════ */
+.ast-diagram{background:var(--bg-deep);border:1px solid var(--border);
+  margin-top:48px;overflow:hidden;position:relative;
+  box-shadow:0 40px 120px rgba(0,0,0,.3)}
+.ast-diagram-bar{height:32px;background:var(--bg-raised);
+  border-bottom:1px solid var(--border);display:flex;
+  align-items:center;padding:0 14px;gap:8px}
+.ast-diagram-bar .dot{width:8px;height:8px;border-radius:50%}
+.ast-diagram-bar .dot.r{background:#ff5f57}
+.ast-diagram-bar .dot.y{background:#febc2e}
+.ast-diagram-bar .dot.g{background:#28c840}
+.ast-diagram-bar .title{margin-left:12px;font-family:var(--mono);font-size:10px;
+  color:var(--text-3);letter-spacing:.04em}
+.ast-diagram svg{display:block;width:100%;height:auto}
+
+/* ════════════════════════════════════════════
+   RESPONSIVE
+   ═══���════════════════════════════════════════ */
+@media(max-width:900px){
+  .wrap{padding:0 24px}
+  .nav-in{padding:0 24px}
+  .nav-r{display:none}
+  .nav-hamburger{display:block}
+  .hero{padding:120px 0 60px}
+  .hero h1{font-size:clamp(40px,10vw,64px)}
+  .sec{padding:64px 0}
+  .steps{grid-template-columns:1fr}
+  .step-arrow{display:none}
+  .problem-grid{grid-template-columns:1fr}
+  .problem-stat{grid-column:span 1}
+  .features{grid-template-columns:1fr}
+  .arch-grid{grid-template-columns:1fr}
+  .about-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat{border-left:none;border-bottom:1px solid var(--border)}
+  .cross-grid{grid-template-columns:1fr;gap:0}
+  .cross-or{padding:16px;border-left:1px solid var(--border);
+    border-right:1px solid var(--border)}
+  .footer-in{grid-template-columns:1fr;gap:12px;text-align:center}
+  .footer-links{justify-content:center}
+  .hero-actions{flex-direction:column;align-items:flex-start}
+  .scroll-layout{grid-template-columns:1fr;min-height:auto}
+  .scroll-sticky{position:relative;top:auto;height:300px;margin-bottom:32px}
+  .scroll-steps{padding:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <div class="nav-in">
+    <a href="#" class="nav-logo">SSR <span>/ SymbolicStateRecall</span></a>
+    <div class="nav-r">
+      <a href="#problem">Problem</a>
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#architecture">Architecture</a>
+      <div class="theme-tog">
+        <button class="active" onclick="setTheme('dark')" title="Dark">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+        </button>
+        <button onclick="setTheme('light')" title="Light">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+      <a href="https://github.com/AsimSayed/symbolic-state-recall/tree/feature/screen-reader-capture" target="_blank" class="nav-cta">GitHub</a>
+    </div>
+    <button class="nav-hamburger" id="menuToggle" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#problem" onclick="closeMenu()">Problem</a>
+  <a href="#how" onclick="closeMenu()">How it works</a>
+  <a href="#features" onclick="closeMenu()">Features</a>
+  <a href="#architecture" onclick="closeMenu()">Architecture</a>
+  <a href="https://github.com/AsimSayed/symbolic-state-recall/tree/feature/screen-reader-capture" target="_blank" onclick="closeMenu()">GitHub</a>
+  <div style="margin-top:auto;padding-top:24px;border-top:1px solid var(--border)">
+    <div class="theme-tog">
+      <button class="active" onclick="setTheme('dark')" title="Dark">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      </button>
+      <button onclick="setTheme('light')" title="Light">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-label rv">macOS Accessibility Tool</div>
+    <h1 class="rv">Reach into<br>equations<span class="accent">.</span></h1>
+    <p class="hero-sub rv d1">The first tool that lets screen reader users structurally navigate mathematical expressions. Not linearly. Structurally. Navigate any part. Extract any sub-expression. Never leave your editor.</p>
+    <div class="hero-actions rv d2">
+      <a href="https://github.com/AsimSayed/symbolic-state-recall/tree/feature/screen-reader-capture" target="_blank" class="btn-blue">View on GitHub</a>
+      <a href="#how" class="btn-ghost">See how it works</a>
+    </div>
+    <div class="hero-note rv d3"><span class="pulse"></span> Swift &middot; macOS 15.2+ &middot; VoiceOver-native &middot; MIT License</div>
+
+    <!-- Terminal visualization -->
+    <div class="terminal rv d3">
+      <div class="terminal-bar">
+        <div class="terminal-dot r"></div>
+        <div class="terminal-dot y"></div>
+        <div class="terminal-dot g"></div>
+        <div class="terminal-title">ssr — recall mode</div>
+      </div>
+      <div class="terminal-body" id="termDemo">
+        <div class="code-line" data-delay="0"><span class="dim">// Input captured from Notes.app via Accessibility API</span></div>
+        <div class="code-line" data-delay="200"><span class="cmd">equation:</span> <span class="hl">x^2 + 3x + 5 = 20</span></div>
+        <div class="code-line" data-delay="500"><span class="dim">&nbsp;</span></div>
+        <div class="code-line" data-delay="700"><span class="dim">// Tree built. Entering recall mode...</span></div>
+        <div class="code-line" data-delay="1000"><span class="cmd">press</span> <span class="hl">1</span>   <span class="speech">&rarr; "Line 1, equation"</span></div>
+        <div class="code-line" data-delay="1300"><span class="cmd">press</span> <span class="hl">L</span>   <span class="speech">&rarr; "Left side, 3 items"</span></div>
+        <div class="code-line" data-delay="1600"><span class="cmd">press</span> <span class="hl">1</span>   <span class="speech">&rarr; "x squared"</span></div>
+        <div class="code-line" data-delay="2000"><span class="dim">&nbsp;</span></div>
+        <div class="code-line" data-delay="2200"><span class="cmd">press</span> <span class="hl">Space</span>  <span class="ok">&rarr; x^2 inserted at cursor</span></div>
+        <div class="code-line" data-delay="2600"><span class="dim">&nbsp;</span></div>
+        <div class="code-line" data-delay="2800"><span class="dim">// 3 keystrokes. Exact sub-expression. Zero vision required.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STATS STRIP ═══ -->
+<div class="stats">
+  <div class="stat rv">
+    <div class="stat-val">0</div>
+    <div class="stat-label">Vision required</div>
+  </div>
+  <div class="stat rv d1">
+    <div class="stat-val">3</div>
+    <div class="stat-label">Keystrokes to extract</div>
+  </div>
+  <div class="stat rv d2">
+    <div class="stat-val">42+</div>
+    <div class="stat-label">Tests passing</div>
+  </div>
+  <div class="stat rv d3">
+    <div class="stat-val">5</div>
+    <div class="stat-label">Pipeline layers</div>
+  </div>
+</div>
+
+<!-- ═══ THE PROBLEM ═══ -->
+<div class="sec" id="problem" style="border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-label rv">The gap</div>
+    <h2 class="rv">Screen readers read math like prose<span class="accent">.</span><br>That's the entire problem<span class="accent">.</span></h2>
+    <p class="desc rv d1">A sighted person sees <strong>x&sup2; + 3x + 5 = 20</strong> as a spatial object. They can focus on the exponent, glance at one side of the equals sign, mentally isolate a term. A VoiceOver user hears a flat stream: <em>"x squared plus 3 x plus 5 equals 20."</em> No way in. No way to grab a piece.</p>
+
+    <div class="problem-grid">
+      <div class="problem-card without rv">
+        <h3>Screen readers today</h3>
+        <ul>
+          <li>Reads equations linearly, left to right</li>
+          <li>No concept of "the part inside the integral"</li>
+          <li>Can't select or extract sub-expressions</li>
+          <li>User must retype from memory</li>
+          <li>Re-listen to entire equation for one piece</li>
+        </ul>
+      </div>
+      <div class="problem-card with rv d1">
+        <h3>With SymbolicStateRecall</h3>
+        <ul>
+          <li>Navigate equations as a tree structure</li>
+          <li>Drill into any level: integral, fraction, exponent</li>
+          <li>Select and extract any node instantly</li>
+          <li>Spoken feedback at every navigation step</li>
+          <li>Insert sub-expression at cursor with one key</li>
+        </ul>
+      </div>
+      <div class="problem-stat rv">
+        <div class="big">0</div>
+        <div class="label">Tools exist today that let screen reader users structurally navigate math</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ANIMATED AST DIAGRAM ═══ -->
+<div class="sec" id="how" style="border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-label rv">How it works</div>
+    <h2 class="rv">Every equation is a tree<span class="accent">.</span><br>You navigate it<span class="accent">.</span></h2>
+    <p class="desc rv d1">SSR parses <strong>x&sup2; + 3x + 5 = 20</strong> into a navigable structure. Each node has a spoken label. Each level is one keypress deep. Watch the tree come alive:</p>
+
+    <!-- Live animated AST diagram -->
+    <div class="ast-diagram rv d2">
+      <div class="ast-diagram-bar">
+        <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+        <span class="title">ssr — abstract syntax tree &middot; x² + 3x + 5 = 20</span>
+      </div>
+      <svg viewBox="0 0 800 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="800" height="420" fill="var(--bg-deep)"/>
+
+        <!-- Ambient glow under root -->
+        <circle cx="400" cy="60" r="120" fill="var(--blue)" opacity=".04">
+          <animate attributeName="opacity" values=".03;.07;.03" dur="4s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- ── BRANCHES (drawn with dash animation) ── -->
+        <!-- Root to Left / Right -->
+        <path d="M400 80 L240 160" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="4 3" opacity=".4">
+          <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="2s" repeatCount="indefinite"/>
+        </path>
+        <path d="M400 80 L560 160" stroke="var(--blue)" stroke-width="1.5" stroke-dasharray="4 3" opacity=".4">
+          <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="2s" repeatCount="indefinite"/>
+        </path>
+        <!-- Left to children -->
+        <path d="M240 180 L120 270" stroke="var(--blue)" stroke-width="1" stroke-dasharray="4 3" opacity=".3">
+          <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="2.3s" repeatCount="indefinite"/>
+        </path>
+        <path d="M240 180 L240 270" stroke="var(--blue)" stroke-width="1" stroke-dasharray="4 3" opacity=".3">
+          <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="2.5s" repeatCount="indefinite"/>
+        </path>
+        <path d="M240 180 L360 270" stroke="var(--blue)" stroke-width="1" stroke-dasharray="4 3" opacity=".3">
+          <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="2.1s" repeatCount="indefinite"/>
+        </path>
+        <!-- x^2 to base/exp -->
+        <path d="M120 290 L80 350" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3" opacity=".2">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/>
+        </path>
+        <path d="M120 290 L160 350" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3" opacity=".2">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2s" repeatCount="indefinite"/>
+        </path>
+        <!-- 3x to coefficient/var -->
+        <path d="M240 290 L210 350" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3" opacity=".2">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2.2s" repeatCount="indefinite"/>
+        </path>
+        <path d="M240 290 L270 350" stroke="var(--blue)" stroke-width="1" stroke-dasharray="3 3" opacity=".2">
+          <animate attributeName="stroke-dashoffset" from="0" to="-12" dur="2.2s" repeatCount="indefinite"/>
+        </path>
+
+        <!-- ── DATA PARTICLES traveling along branches ── -->
+        <circle r="2.5" fill="var(--blue)" opacity=".8">
+          <animateMotion dur="2s" repeatCount="indefinite" path="M400 80 L240 160"/>
+        </circle>
+        <circle r="2.5" fill="var(--blue)" opacity=".6">
+          <animateMotion dur="2.2s" repeatCount="indefinite" path="M400 80 L560 160" begin=".5s"/>
+        </circle>
+        <circle r="2" fill="var(--blue)" opacity=".5">
+          <animateMotion dur="2s" repeatCount="indefinite" path="M240 180 L120 270" begin=".8s"/>
+        </circle>
+        <circle r="2" fill="var(--blue)" opacity=".5">
+          <animateMotion dur="2.3s" repeatCount="indefinite" path="M240 180 L240 270" begin="1.2s"/>
+        </circle>
+        <circle r="2" fill="var(--blue)" opacity=".4">
+          <animateMotion dur="2.1s" repeatCount="indefinite" path="M240 180 L360 270" begin=".3s"/>
+        </circle>
+
+        <!-- ── NODES ── -->
+        <!-- Root: Equation (=) -->
+        <rect x="355" y="40" width="90" height="36" fill="var(--bg-raised)" stroke="var(--blue)" stroke-width="2"/>
+        <text x="400" y="63" text-anchor="middle" font-family="Geist Mono, monospace" font-size="13" fill="var(--blue)" font-weight="500">EQ ( = )</text>
+
+        <!-- Left side -->
+        <rect x="186" y="148" width="108" height="36" fill="var(--bg-raised)" stroke="var(--blue)" stroke-width="1.5"/>
+        <text x="240" y="171" text-anchor="middle" font-family="Geist Mono, monospace" font-size="11" fill="var(--text)">LEFT SIDE</text>
+        <!-- Speech label -->
+        <rect x="296" y="144" width="92" height="20" rx="2" fill="var(--blue-dim)">
+          <animate attributeName="opacity" values=".6;1;.6" dur="3s" repeatCount="indefinite"/>
+        </rect>
+        <text x="342" y="158" text-anchor="middle" font-family="Geist Mono, monospace" font-size="9" fill="var(--blue)">"3 items"</text>
+
+        <!-- Right side -->
+        <rect x="506" y="148" width="108" height="36" fill="var(--bg-raised)" stroke="var(--border-bright)" stroke-width="1"/>
+        <text x="560" y="171" text-anchor="middle" font-family="Geist Mono, monospace" font-size="11" fill="var(--text-2)">RIGHT SIDE</text>
+        <text x="560" y="210" text-anchor="middle" font-family="Geist Mono, monospace" font-size="18" fill="var(--text-3)" style="animation:float-node 3s ease-in-out infinite">20</text>
+
+        <!-- Leaf: x² (highlighted — selected node) -->
+        <circle cx="120" cy="278" r="8" fill="var(--blue)" opacity=".15">
+          <animate attributeName="r" values="8;14;8" dur="2.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".15;.3;.15" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <rect x="80" y="260" width="80" height="36" fill="var(--bg-raised)" stroke="var(--blue)" stroke-width="2"/>
+        <text x="120" y="283" text-anchor="middle" font-family="Geist Mono, monospace" font-size="13" fill="var(--blue)" font-weight="500">x²</text>
+        <!-- Speech label for x² -->
+        <rect x="56" y="304" width="128" height="22" rx="2" fill="var(--blue-dim)"/>
+        <text x="120" y="319" text-anchor="middle" font-family="Geist Mono, monospace" font-size="10" fill="var(--blue)">"x squared"</text>
+
+        <!-- Sub-nodes of x²: base and exponent -->
+        <rect x="52" y="342" width="56" height="28" fill="var(--bg-raised)" stroke="var(--border)" stroke-width="1"/>
+        <text x="80" y="360" text-anchor="middle" font-family="Geist Mono, monospace" font-size="11" fill="var(--text-3)">x</text>
+        <rect x="132" y="342" width="56" height="28" fill="var(--bg-raised)" stroke="var(--border)" stroke-width="1"/>
+        <text x="160" y="360" text-anchor="middle" font-family="Geist Mono, monospace" font-size="11" fill="var(--text-3)">2</text>
+
+        <!-- Leaf: 3x -->
+        <rect x="200" y="260" width="80" height="36" fill="var(--bg-raised)" stroke="var(--border-bright)" stroke-width="1"/>
+        <text x="240" y="283" text-anchor="middle" font-family="Geist Mono, monospace" font-size="13" fill="var(--text-2)">3x</text>
+        <!-- Sub-nodes of 3x -->
+        <rect x="182" y="342" width="44" height="28" fill="var(--bg-raised)" stroke="var(--border)" stroke-width="1"/>
+        <text x="204" y="360" text-anchor="middle" font-family="Geist Mono, monospace" font-size="11" fill="var(--text-3)">3</text>
+        <rect x="248" y="342" width="44" height="28" fill="var(--bg-raised)" stroke="var(--border)" stroke-width="1"/>
+        <text x="270" y="360" text-anchor="middle" font-family="Geist Mono, monospace" font-size="11" fill="var(--text-3)">x</text>
+
+        <!-- Leaf: 5 -->
+        <rect x="320" y="260" width="80" height="36" fill="var(--bg-raised)" stroke="var(--border-bright)" stroke-width="1"/>
+        <text x="360" y="283" text-anchor="middle" font-family="Geist Mono, monospace" font-size="13" fill="var(--text-2)">5</text>
+
+        <!-- Navigation path highlight: pulsing line from root → left → x² -->
+        <path d="M400 80 L240 168 L120 260" stroke="var(--blue)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".3" stroke-dasharray="6 4">
+          <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".2;.5;.2" dur="3s" repeatCount="indefinite"/>
+        </path>
+
+        <!-- Navigation keys display -->
+        <rect x="590" y="260" width="180" height="100" fill="var(--bg-raised)" stroke="var(--border)" stroke-width="1"/>
+        <text x="606" y="280" font-family="Geist Mono, monospace" font-size="9" fill="var(--text-3)" letter-spacing=".06em">NAVIGATION PATH</text>
+        <text x="606" y="302" font-family="Geist Mono, monospace" font-size="12" fill="var(--blue)">1</text>
+        <text x="624" y="302" font-family="Geist Mono, monospace" font-size="10" fill="var(--text-3)">→ "Line 1"</text>
+        <text x="606" y="322" font-family="Geist Mono, monospace" font-size="12" fill="var(--blue)">L</text>
+        <text x="624" y="322" font-family="Geist Mono, monospace" font-size="10" fill="var(--text-3)">→ "Left, 3 items"</text>
+        <text x="606" y="342" font-family="Geist Mono, monospace" font-size="12" fill="var(--blue)">1</text>
+        <text x="624" y="342" font-family="Geist Mono, monospace" font-size="10" fill="var(--text-3)">→ "x squared"</text>
+
+        <!-- Status bar at bottom -->
+        <rect x="0" y="392" width="800" height="28" fill="var(--bg-raised)"/>
+        <line x1="0" y1="392" x2="800" y2="392" stroke="var(--border)" stroke-width="1"/>
+        <circle cx="20" cy="406" r="3" fill="var(--green)">
+          <animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <text x="32" y="410" font-family="Geist Mono, monospace" font-size="9" fill="var(--text-3)" letter-spacing=".04em">RECALL MODE ACTIVE</text>
+        <text x="260" y="410" font-family="Geist Mono, monospace" font-size="9" fill="var(--text-3)">DEPTH: 3</text>
+        <text x="400" y="410" font-family="Geist Mono, monospace" font-size="9" fill="var(--blue)">SELECTED: x²</text>
+        <text x="600" y="410" font-family="Geist Mono, monospace" font-size="9" fill="var(--text-3)">PRESS SPACE TO INSERT</text>
+      </svg>
+    </div>
+
+    <!-- Pipeline steps -->
+    <div style="margin-top:64px">
+      <div class="sec-label rv">The pipeline</div>
+    </div>
+    <div class="steps">
+      <div class="step rv">
+        <div class="step-num">01</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h3>Capture</h3>
+        <p>Reads from any app via macOS Accessibility APIs.</p>
+        <span class="step-arrow">&rarr;</span>
+      </div>
+      <div class="step rv d1">
+        <div class="step-num">02</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h3>Parse</h3>
+        <p>Tokenizer + parser builds MathNode AST.</p>
+        <span class="step-arrow">&rarr;</span>
+      </div>
+      <div class="step rv d2">
+        <div class="step-num">03</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Recall</h3>
+        <p>Option+Space enters recall mode.</p>
+        <span class="step-arrow">&rarr;</span>
+      </div>
+      <div class="step rv d3">
+        <div class="step-num">04</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3>Navigate</h3>
+        <p>Type a path: 1 L 1. Spoken feedback.</p>
+        <span class="step-arrow">&rarr;</span>
+      </div>
+      <div class="step rv d4">
+        <div class="step-num">05</div>
+        <div class="step-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/></svg>
+        </div>
+        <h3>Insert</h3>
+        <p>Space inserts selected node at cursor.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCROLLYTELLING — The Journey of an Equation ═══ -->
+<div class="scroll-section" id="journey">
+  <div class="wrap">
+    <div class="sec-label rv" style="margin-bottom:48px">The journey</div>
+    <h2 class="rv" style="margin-bottom:64px">From flat audio<br>to structural navigation<span class="accent">.</span></h2>
+
+    <div class="scroll-layout">
+      <!-- Sticky visual panel -->
+      <div class="scroll-sticky">
+        <div class="scroll-sticky-inner" id="scrollViz">
+
+          <!-- Layer 1: Flat audio — equation as linear text -->
+          <div class="viz-layer visible" id="vizLayer1">
+            <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+              <rect width="480" height="480" fill="#060810"/>
+              <!-- VoiceOver icon -->
+              <text x="240" y="100" text-anchor="middle" font-size="48" opacity=".6">🔊</text>
+              <!-- Single flat line of text -->
+              <text x="240" y="170" text-anchor="middle" font-family="monospace" font-size="20" fill="#e4e8f0">x² + 3x + 5 = 20</text>
+              <!-- Long arrow showing linear read direction -->
+              <line x1="60" y1="200" x2="420" y2="200" stroke="#5ea6ff" stroke-width="2" stroke-dasharray="8 4" opacity=".4">
+                <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="1.5s" repeatCount="indefinite"/>
+              </line>
+              <polygon points="415,194 430,200 415,206" fill="#5ea6ff" opacity=".4"/>
+              <!-- Waveform — bold and visible -->
+              <g transform="translate(60, 240)">
+                <rect x="0" y="10" width="6" height="30" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="30;10;30" dur="1.5s" repeatCount="indefinite"/><animate attributeName="y" values="10;20;10" dur="1.5s" repeatCount="indefinite"/></rect>
+                <rect x="18" y="4" width="6" height="42" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="42;14;42" dur="1.8s" repeatCount="indefinite" begin=".1s"/><animate attributeName="y" values="4;18;4" dur="1.8s" repeatCount="indefinite" begin=".1s"/></rect>
+                <rect x="36" y="12" width="6" height="26" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="26;8;26" dur="1.3s" repeatCount="indefinite" begin=".2s"/><animate attributeName="y" values="12;21;12" dur="1.3s" repeatCount="indefinite" begin=".2s"/></rect>
+                <rect x="54" y="0" width="6" height="50" fill="#5ea6ff" opacity=".6" rx="1"><animate attributeName="height" values="50;18;50" dur="2s" repeatCount="indefinite" begin=".3s"/><animate attributeName="y" values="0;16;0" dur="2s" repeatCount="indefinite" begin=".3s"/></rect>
+                <rect x="72" y="6" width="6" height="38" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="38;12;38" dur="1.6s" repeatCount="indefinite" begin=".15s"/><animate attributeName="y" values="6;19;6" dur="1.6s" repeatCount="indefinite" begin=".15s"/></rect>
+                <rect x="90" y="14" width="6" height="22" fill="#5ea6ff" opacity=".4" rx="1"><animate attributeName="height" values="22;6;22" dur="1.4s" repeatCount="indefinite" begin=".25s"/><animate attributeName="y" values="14;22;14" dur="1.4s" repeatCount="indefinite" begin=".25s"/></rect>
+                <rect x="108" y="2" width="6" height="46" fill="#5ea6ff" opacity=".6" rx="1"><animate attributeName="height" values="46;16;46" dur="1.9s" repeatCount="indefinite" begin=".05s"/><animate attributeName="y" values="2;17;2" dur="1.9s" repeatCount="indefinite" begin=".05s"/></rect>
+                <rect x="126" y="8" width="6" height="34" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="34;10;34" dur="1.7s" repeatCount="indefinite" begin=".35s"/><animate attributeName="y" values="8;20;8" dur="1.7s" repeatCount="indefinite" begin=".35s"/></rect>
+                <rect x="144" y="12" width="6" height="26" fill="#5ea6ff" opacity=".4" rx="1"><animate attributeName="height" values="26;8;26" dur="1.5s" repeatCount="indefinite" begin=".4s"/><animate attributeName="y" values="12;21;12" dur="1.5s" repeatCount="indefinite" begin=".4s"/></rect>
+                <rect x="162" y="0" width="6" height="50" fill="#5ea6ff" opacity=".6" rx="1"><animate attributeName="height" values="50;20;50" dur="2.1s" repeatCount="indefinite" begin=".12s"/><animate attributeName="y" values="0;15;0" dur="2.1s" repeatCount="indefinite" begin=".12s"/></rect>
+                <rect x="180" y="6" width="6" height="38" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="38;12;38" dur="1.6s" repeatCount="indefinite" begin=".22s"/><animate attributeName="y" values="6;19;6" dur="1.6s" repeatCount="indefinite" begin=".22s"/></rect>
+                <rect x="198" y="10" width="6" height="30" fill="#5ea6ff" opacity=".45" rx="1"><animate attributeName="height" values="30;10;30" dur="1.4s" repeatCount="indefinite" begin=".32s"/><animate attributeName="y" values="10;20;10" dur="1.4s" repeatCount="indefinite" begin=".32s"/></rect>
+                <rect x="216" y="4" width="6" height="42" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="42;16;42" dur="1.8s" repeatCount="indefinite" begin=".08s"/><animate attributeName="y" values="4;17;4" dur="1.8s" repeatCount="indefinite" begin=".08s"/></rect>
+                <rect x="234" y="12" width="6" height="26" fill="#5ea6ff" opacity=".4" rx="1"><animate attributeName="height" values="26;8;26" dur="1.3s" repeatCount="indefinite" begin=".28s"/><animate attributeName="y" values="12;21;12" dur="1.3s" repeatCount="indefinite" begin=".28s"/></rect>
+                <rect x="252" y="2" width="6" height="46" fill="#5ea6ff" opacity=".55" rx="1"><animate attributeName="height" values="46;16;46" dur="1.9s" repeatCount="indefinite" begin=".18s"/><animate attributeName="y" values="2;17;2" dur="1.9s" repeatCount="indefinite" begin=".18s"/></rect>
+                <rect x="270" y="8" width="6" height="34" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="34;10;34" dur="1.7s" repeatCount="indefinite" begin=".38s"/><animate attributeName="y" values="8;20;8" dur="1.7s" repeatCount="indefinite" begin=".38s"/></rect>
+                <rect x="288" y="14" width="6" height="22" fill="#5ea6ff" opacity=".4" rx="1"><animate attributeName="height" values="22;6;22" dur="1.4s" repeatCount="indefinite" begin=".42s"/><animate attributeName="y" values="14;22;14" dur="1.4s" repeatCount="indefinite" begin=".42s"/></rect>
+                <rect x="306" y="6" width="6" height="38" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="38;12;38" dur="1.6s" repeatCount="indefinite" begin=".14s"/><animate attributeName="y" values="6;19;6" dur="1.6s" repeatCount="indefinite" begin=".14s"/></rect>
+                <rect x="324" y="10" width="6" height="30" fill="#5ea6ff" opacity=".45" rx="1"><animate attributeName="height" values="30;10;30" dur="1.5s" repeatCount="indefinite" begin=".34s"/><animate attributeName="y" values="10;20;10" dur="1.5s" repeatCount="indefinite" begin=".34s"/></rect>
+                <rect x="342" y="4" width="6" height="42" fill="#5ea6ff" opacity=".5" rx="1"><animate attributeName="height" values="42;14;42" dur="1.8s" repeatCount="indefinite" begin=".24s"/><animate attributeName="y" values="4;18;4" dur="1.8s" repeatCount="indefinite" begin=".24s"/></rect>
+              </g>
+              <!-- Speech text -->
+              <rect x="60" y="340" width="360" height="36" rx="2" fill="rgba(94,166,255,.08)" stroke="rgba(94,166,255,.15)" stroke-width="1"/>
+              <text x="240" y="363" text-anchor="middle" font-family="monospace" font-size="13" fill="#8a92a4" font-style="italic">"x squared plus 3 x plus 5 equals 20"</text>
+              <!-- Status bar -->
+              <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+              <text x="20" y="464" font-family="monospace" font-size="10" fill="#f87171" letter-spacing=".06em">NO STRUCTURE</text>
+              <text x="200" y="464" font-family="monospace" font-size="10" fill="#4a5068">LINEAR AUDIO — CAN'T SELECT PARTS</text>
+            </svg>
+          </div>
+
+          <!-- Layer 2: Parse — tree structure emerges -->
+          <div class="viz-layer hidden" id="vizLayer2">
+            <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+              <rect width="480" height="480" fill="#060810"/>
+              <!-- Source text -->
+              <text x="240" y="36" text-anchor="middle" font-family="monospace" font-size="11" fill="#8a92a4">x² + 3x + 5 = 20</text>
+              <!-- Arrow down -->
+              <path d="M240 44 L240 68" stroke="#5ea6ff" stroke-width="1.5" stroke-dasharray="4 3">
+                <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="1s" repeatCount="indefinite"/>
+              </path>
+              <!-- Root: EQ -->
+              <rect x="190" y="70" width="100" height="36" fill="#12151c" stroke="#5ea6ff" stroke-width="2"/>
+              <text x="240" y="93" text-anchor="middle" font-family="monospace" font-size="14" fill="#5ea6ff" font-weight="bold">EQ ( = )</text>
+              <!-- Branch to Left -->
+              <path d="M220 106 L130 156" stroke="#5ea6ff" stroke-width="1.5" opacity=".6" stroke-dasharray="100">
+                <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.5s" repeatCount="indefinite"/>
+              </path>
+              <!-- Branch to Right -->
+              <path d="M260 106 L350 156" stroke="#5ea6ff" stroke-width="1.5" opacity=".6" stroke-dasharray="100">
+                <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.5s" repeatCount="indefinite" begin=".3s"/>
+              </path>
+              <!-- Particles -->
+              <circle r="3" fill="#5ea6ff" opacity=".8"><animateMotion dur="1.5s" repeatCount="indefinite" path="M220 106 L130 156"/></circle>
+              <circle r="3" fill="#5ea6ff" opacity=".6"><animateMotion dur="1.5s" repeatCount="indefinite" path="M260 106 L350 156" begin=".6s"/></circle>
+              <!-- Left side node -->
+              <rect x="72" y="158" width="116" height="36" fill="#12151c" stroke="#5ea6ff" stroke-width="1.5"/>
+              <text x="130" y="181" text-anchor="middle" font-family="monospace" font-size="12" fill="#e4e8f0">LEFT SIDE</text>
+              <!-- Right side node -->
+              <rect x="292" y="158" width="116" height="36" fill="#12151c" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+              <text x="350" y="181" text-anchor="middle" font-family="monospace" font-size="12" fill="#8a92a4">RIGHT SIDE</text>
+              <!-- Branches from Left to children (growing) -->
+              <path d="M110 194 L70 250" stroke="#5ea6ff" stroke-width="1" opacity=".4" stroke-dasharray="80">
+                <animate attributeName="stroke-dashoffset" from="80" to="0" dur="2s" repeatCount="indefinite"/>
+              </path>
+              <path d="M130 194 L130 250" stroke="#5ea6ff" stroke-width="1" opacity=".4" stroke-dasharray="80">
+                <animate attributeName="stroke-dashoffset" from="80" to="0" dur="2s" repeatCount="indefinite" begin=".2s"/>
+              </path>
+              <path d="M150 194 L190 250" stroke="#5ea6ff" stroke-width="1" opacity=".4" stroke-dasharray="80">
+                <animate attributeName="stroke-dashoffset" from="80" to="0" dur="2s" repeatCount="indefinite" begin=".4s"/>
+              </path>
+              <!-- Leaf nodes -->
+              <rect x="34" y="252" width="72" height="32" fill="#12151c" stroke="#5ea6ff" stroke-width="1.5"/>
+              <text x="70" y="273" text-anchor="middle" font-family="monospace" font-size="15" fill="#5ea6ff" font-weight="bold">x²</text>
+              <rect x="94" y="252" width="72" height="32" fill="#12151c" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+              <text x="130" y="273" text-anchor="middle" font-family="monospace" font-size="14" fill="#8a92a4">3x</text>
+              <rect x="154" y="252" width="72" height="32" fill="#12151c" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+              <text x="190" y="273" text-anchor="middle" font-family="monospace" font-size="14" fill="#8a92a4">5</text>
+              <!-- Right leaf -->
+              <path d="M350 194 L350 250" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+              <rect x="314" y="252" width="72" height="32" fill="#12151c" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+              <text x="350" y="273" text-anchor="middle" font-family="monospace" font-size="14" fill="#8a92a4">20</text>
+              <!-- Status bar -->
+              <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+              <text x="20" y="464" font-family="monospace" font-size="10" fill="#5ea6ff" letter-spacing=".06em">PARSING: 7 TOKENS → 6 NODES → 1 AST</text>
+              <text x="380" y="464" font-family="monospace" font-size="10" fill="#34d399">READY</text>
+            </svg>
+          </div>
+
+          <!-- Layer 3: Navigate — drilling into the tree -->
+          <div class="viz-layer hidden" id="vizLayer3">
+            <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+              <rect width="480" height="480" fill="#060810"/>
+              <!-- Navigation path glow -->
+              <path d="M240 80 L130 146 L70 230" stroke="#5ea6ff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".2" stroke-dasharray="10 6">
+                <animate attributeName="stroke-dashoffset" from="0" to="-32" dur="1.5s" repeatCount="indefinite"/>
+              </path>
+              <!-- Root: EQ -->
+              <rect x="195" y="50" width="90" height="32" fill="#12151c" stroke="#5ea6ff" stroke-width="2"/>
+              <text x="240" y="71" text-anchor="middle" font-family="monospace" font-size="13" fill="#5ea6ff">EQ</text>
+              <!-- Branches -->
+              <path d="M225 82 L130 130" stroke="#5ea6ff" stroke-width="1.5" opacity=".6"/>
+              <path d="M255 82 L340 130" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+              <!-- Left: highlighted -->
+              <rect x="72" y="130" width="116" height="34" fill="#12151c" stroke="#5ea6ff" stroke-width="2"/>
+              <text x="130" y="152" text-anchor="middle" font-family="monospace" font-size="12" fill="#5ea6ff">LEFT SIDE</text>
+              <!-- Speech bubble -->
+              <rect x="192" y="132" width="100" height="26" rx="3" fill="rgba(94,166,255,.15)" stroke="rgba(94,166,255,.25)" stroke-width="1">
+                <animate attributeName="opacity" values=".7;1;.7" dur="3s" repeatCount="indefinite"/>
+              </rect>
+              <text x="242" y="150" text-anchor="middle" font-family="monospace" font-size="11" fill="#5ea6ff">"3 items"</text>
+              <!-- Right: dimmed -->
+              <rect x="292" y="130" width="100" height="34" fill="#12151c" stroke="rgba(255,255,255,.06)" stroke-width="1" opacity=".25"/>
+              <text x="342" y="152" text-anchor="middle" font-family="monospace" font-size="11" fill="#4a5068">RIGHT</text>
+              <!-- Children branches -->
+              <path d="M110 164 L70 216" stroke="#5ea6ff" stroke-width="1.5" opacity=".5"/>
+              <path d="M130 164 L130 216" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+              <path d="M150 164 L190 216" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+              <!-- x² : THE SELECTED NODE with glow -->
+              <circle cx="70" cy="234" r="28" fill="#5ea6ff" opacity=".1">
+                <animate attributeName="r" values="28;38;28" dur="2.5s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values=".08;.2;.08" dur="2.5s" repeatCount="indefinite"/>
+              </circle>
+              <rect x="30" y="218" width="80" height="36" fill="#12151c" stroke="#5ea6ff" stroke-width="3"/>
+              <text x="70" y="241" text-anchor="middle" font-family="monospace" font-size="18" fill="#5ea6ff" font-weight="bold">x²</text>
+              <!-- Speech for x² -->
+              <rect x="116" y="220" width="130" height="26" rx="3" fill="rgba(94,166,255,.15)" stroke="rgba(94,166,255,.25)" stroke-width="1"/>
+              <text x="181" y="238" text-anchor="middle" font-family="monospace" font-size="12" fill="#5ea6ff">"x squared"</text>
+              <!-- Other leaves: dimmed -->
+              <rect x="96" y="218" width="68" height="32" fill="#12151c" stroke="rgba(255,255,255,.06)" stroke-width="1" opacity=".2"/>
+              <text x="130" y="239" text-anchor="middle" font-family="monospace" font-size="12" fill="#4a5068">3x</text>
+              <rect x="156" y="218" width="68" height="32" fill="#12151c" stroke="rgba(255,255,255,.06)" stroke-width="1" opacity=".2"/>
+              <text x="190" y="239" text-anchor="middle" font-family="monospace" font-size="12" fill="#4a5068">5</text>
+              <!-- Keystroke panel -->
+              <rect x="280" y="210" width="180" height="160" fill="#12151c" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+              <text x="296" y="234" font-family="monospace" font-size="10" fill="#4a5068" letter-spacing=".06em">KEYSTROKES</text>
+              <!-- Key 1 -->
+              <rect x="296" y="248" width="32" height="32" fill="rgba(94,166,255,.1)" stroke="#5ea6ff" stroke-width="1"/>
+              <text x="312" y="269" text-anchor="middle" font-family="monospace" font-size="16" fill="#5ea6ff">1</text>
+              <text x="338" y="269" font-family="monospace" font-size="11" fill="#8a92a4">"Line 1"</text>
+              <!-- Key L -->
+              <rect x="296" y="290" width="32" height="32" fill="rgba(94,166,255,.1)" stroke="#5ea6ff" stroke-width="1"/>
+              <text x="312" y="311" text-anchor="middle" font-family="monospace" font-size="16" fill="#5ea6ff">L</text>
+              <text x="338" y="311" font-family="monospace" font-size="11" fill="#8a92a4">"Left, 3 items"</text>
+              <!-- Key 1 (active) -->
+              <rect x="296" y="332" width="32" height="32" fill="rgba(94,166,255,.2)" stroke="#5ea6ff" stroke-width="2">
+                <animate attributeName="stroke-width" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+              </rect>
+              <text x="312" y="353" text-anchor="middle" font-family="monospace" font-size="16" fill="#5ea6ff" font-weight="bold">1</text>
+              <text x="338" y="353" font-family="monospace" font-size="11" fill="#5ea6ff" font-weight="bold">"x squared"</text>
+              <!-- Status bar -->
+              <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+              <circle cx="20" cy="460" r="4" fill="#34d399"><animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/></circle>
+              <text x="34" y="464" font-family="monospace" font-size="10" fill="#8a92a4">RECALL</text>
+              <text x="110" y="464" font-family="monospace" font-size="10" fill="#5ea6ff">SELECTED: x²</text>
+              <text x="290" y="464" font-family="monospace" font-size="10" fill="#4a5068">PATH: 1.L.1 · DEPTH 3</text>
+            </svg>
+          </div>
+
+          <!-- Layer 4: Extract — node inserted into document -->
+          <div class="viz-layer hidden" id="vizLayer4">
+            <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+              <rect width="480" height="480" fill="#060810"/>
+              <!-- Glow -->
+              <circle cx="240" cy="120" r="70" fill="#5ea6ff" opacity=".06">
+                <animate attributeName="r" values="70;90;70" dur="3s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values=".04;.1;.04" dur="3s" repeatCount="indefinite"/>
+              </circle>
+              <!-- Extracted node: big, centered -->
+              <rect x="170" y="80" width="140" height="64" fill="#12151c" stroke="#5ea6ff" stroke-width="3">
+                <animate attributeName="stroke-width" values="3;4;3" dur="2s" repeatCount="indefinite"/>
+              </rect>
+              <text x="240" y="120" text-anchor="middle" font-family="monospace" font-size="32" fill="#5ea6ff" font-weight="bold">x²</text>
+              <!-- Arrow flowing down -->
+              <path d="M240 148 L240 220" stroke="#5ea6ff" stroke-width="2.5" stroke-dasharray="8 5">
+                <animate attributeName="stroke-dashoffset" from="0" to="-26" dur="1s" repeatCount="indefinite"/>
+              </path>
+              <polygon points="232,216 248,216 240,232" fill="#5ea6ff" opacity=".8"/>
+              <!-- Notes.app document -->
+              <rect x="80" y="240" width="320" height="150" fill="#12151c" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+              <rect x="80" y="240" width="320" height="28" fill="#1a1e28"/>
+              <circle cx="100" cy="254" r="5" fill="#ff5f57"/>
+              <circle cx="118" cy="254" r="5" fill="#febc2e"/>
+              <circle cx="136" cy="254" r="5" fill="#28c840"/>
+              <text x="240" y="258" text-anchor="middle" font-family="monospace" font-size="10" fill="#4a5068">Notes.app — homework.txt</text>
+              <!-- Document content -->
+              <text x="100" y="292" font-family="monospace" font-size="12" fill="#8a92a4">The integrand is:</text>
+              <text x="100" y="318" font-family="monospace" font-size="18" fill="#5ea6ff" font-weight="bold">x^2</text>
+              <rect x="140" y="304" width="2" height="20" fill="#5ea6ff">
+                <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+              </rect>
+              <text x="100" y="348" font-family="monospace" font-size="12" fill="#4a5068">which we evaluate from 0 to 1</text>
+              <text x="100" y="372" font-family="monospace" font-size="12" fill="#4a5068">giving us a result of 1/3.</text>
+              <!-- Faded tree ghost -->
+              <g opacity=".08">
+                <rect x="350" y="30" width="60" height="24" stroke="#5ea6ff" stroke-width="1" fill="none"/>
+                <path d="M380 54 L360 74 M380 54 L400 74" stroke="#5ea6ff" stroke-width="1"/>
+                <rect x="340" y="76" width="40" height="16" stroke="#5ea6ff" stroke-width="1" fill="none"/>
+                <rect x="384" y="76" width="40" height="16" stroke="#5ea6ff" stroke-width="1" fill="none"/>
+              </g>
+              <!-- Status bar -->
+              <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+              <circle cx="20" cy="460" r="4" fill="#34d399"/>
+              <text x="34" y="464" font-family="monospace" font-size="10" fill="#34d399" letter-spacing=".04em">INSERTED</text>
+              <text x="130" y="464" font-family="monospace" font-size="10" fill="#8a92a4">x^2 → cursor in Notes.app</text>
+              <text x="370" y="464" font-family="monospace" font-size="10" fill="#4a5068">0 VISION</text>
+            </svg>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Scroll steps (text column) -->
+      <div class="scroll-steps">
+        <div class="scroll-step active" data-step="0">
+          <div class="scroll-step-num">01 — The status quo</div>
+          <h3>A wall of sound with no way in</h3>
+          <p>Your screen reader announces: <em>"x squared plus 3 x plus 5 equals 20."</em> You heard it. You understood it. But now you need just the first term. You can't click on it. You can't select it. You either retype it from memory or re-listen to the whole thing. This is the daily reality for every blind student working with math.</p>
+          <div class="step-key">LINEAR &middot; NO STRUCTURE &middot; NO SELECTION</div>
+        </div>
+        <div class="scroll-step" data-step="1">
+          <div class="scroll-step-num">02 — The parse</div>
+          <h3>Text becomes structure</h3>
+          <p>SSR's tokenizer breaks the equation into 7 tokens. The parser builds an Abstract Syntax Tree: an equation node at the root, left and right sides as children, individual terms as leaves. The flat string is now a navigable structure. Every node knows what it is — power, product, constant — and can describe itself in plain language.</p>
+          <div class="step-key">7 TOKENS → 6 NODES → 1 AST</div>
+        </div>
+        <div class="scroll-step" data-step="2">
+          <div class="scroll-step-num">03 — The navigation</div>
+          <h3>Three keys to any node</h3>
+          <p>Press <strong>1</strong> — VoiceOver announces "Line 1, equation." Press <strong>L</strong> — "Left side, 3 items." Press <strong>1</strong> — "x squared." Three keystrokes. You're now pointing at exactly the sub-expression you need. Every step is spoken. Every state change is announced. You never have to guess where you are.</p>
+          <div class="step-key">PATH: 1 → L → 1 &middot; SPOKEN AT EVERY STEP</div>
+        </div>
+        <div class="scroll-step" data-step="3">
+          <div class="scroll-step-num">04 — The extraction</div>
+          <h3>Space. Inserted. Done.</h3>
+          <p>Press Space. The selected node is serialized back to plain text — <strong>x^2</strong> — and inserted at your cursor position in Notes.app. You never left your text editor. You never touched the clipboard. The entire interaction was non-visual, structural, and took under two seconds.</p>
+          <div class="step-key">x^2 → CURSOR &middot; ZERO VISION REQUIRED</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FEATURES ═══ -->
+<div class="sec" id="features" style="border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-label rv">What it parses</div>
+    <h2 class="rv">Calculus-level math<span class="accent">.</span><br>From plain text<span class="accent">.</span></h2>
+    <p class="desc rv d1">No LaTeX required. No MathML. SSR accepts the kind of math notation people actually type. Because the people who need this tool shouldn't have to learn a second notation system to study the subject they already understand.</p>
+
+    <div class="features">
+      <div class="feature rv">
+        <div class="feature-label">Expressions</div>
+        <h3>Equations, powers, fractions</h3>
+        <p>Full operator precedence handling, implicit multiplication, multi-line equation support with tolerant parsing.</p>
+        <div class="feature-code">x^2 + 3x = 7 &nbsp;&bull;&nbsp; (x+1)/(x-1) &nbsp;&bull;&nbsp; 3x &rarr; 3*x</div>
+      </div>
+      <div class="feature rv d1">
+        <div class="feature-label">Calculus</div>
+        <h3>Integrals, derivatives, limits</h3>
+        <p>Definite and indefinite integrals, derivative notation, limit expressions with approach syntax.</p>
+        <div class="feature-code">int_0^1 x^2 dx &nbsp;&bull;&nbsp; d/dx &nbsp;&bull;&nbsp; lim_x->0</div>
+      </div>
+      <div class="feature rv d2">
+        <div class="feature-label">Functions</div>
+        <h3>Trig, logarithms, roots</h3>
+        <p>sin, cos, tan, ln, log, square roots, nth roots. All parsed into navigable tree nodes.</p>
+        <div class="feature-code">sin(x) &nbsp;&bull;&nbsp; ln(e^x) &nbsp;&bull;&nbsp; sqrt(x) &nbsp;&bull;&nbsp; root3(8)</div>
+      </div>
+      <div class="feature rv d3">
+        <div class="feature-label">Resilience</div>
+        <h3>Error-tolerant by design</h3>
+        <p>Skips non-math lines. Preserves last valid path on error. 400ms multi-digit input buffering. Never drops you out of recall mode.</p>
+        <div class="feature-code">// When your user can't see the screen, you don't crash.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ QUOTE ═══ -->
+<div class="quote-block" style="border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <p class="quote-text rv">"I believe good design should honour all ways of sensing life."</p>
+    <p class="quote-attr rv d1">Asim Sayed &middot; Creator of SSR</p>
+  </div>
+</div>
+
+<!-- ═══ ARCHITECTURE ═══ -->
+<div class="sec" id="architecture" style="border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-label rv">Architecture</div>
+    <h2 class="rv">Five layers. Each<br>independently testable<span class="accent">.</span></h2>
+    <p class="desc rv d1">A deliberate pipeline, not a monolith. Every component can be run and verified in isolation through the CLI test harness.</p>
+
+    <div class="arch-grid">
+      <div class="arch-diagram rv">
+<span class="layer">Input Layer</span>
+  <span class="component">  FocusedTextReader</span>  <span class="note">// AXUIElement APIs</span>
+  <span class="component">  ClipboardMonitor</span>   <span class="note">// Fallback capture</span>
+
+<span class="layer">Parser</span>
+  <span class="component">  Tokenizer</span>          <span class="note">// Plain text &rarr; tokens</span>
+  <span class="component">  Parser</span>             <span class="note">// Tokens &rarr; MathNode AST</span>
+
+<span class="layer">Navigation Engine</span>
+  <span class="component">  RecallNavigator</span>    <span class="note">// Tree traversal + state</span>
+
+<span class="layer">Speech Controller</span>
+  <span class="component">  SpeechController</span>   <span class="note">// NSAccessibility announce</span>
+
+<span class="layer">Serializer</span>
+  <span class="component">  NodeSerializer</span>     <span class="note">// MathNode &rarr; plain text</span>
+      </div>
+
+      <div class="arch-specs rv d1">
+        <div class="spec-row"><span class="spec-key">Language</span><span class="spec-val">Swift</span></div>
+        <div class="spec-row"><span class="spec-key">Platform</span><span class="spec-val">macOS 15.2+</span></div>
+        <div class="spec-row"><span class="spec-key">IDE</span><span class="spec-val">Xcode 16.2+</span></div>
+        <div class="spec-row"><span class="spec-key">UI Framework</span><span class="spec-val">SwiftUI</span></div>
+        <div class="spec-row"><span class="spec-key">Global Hotkeys</span><span class="spec-val">Carbon API</span></div>
+        <div class="spec-row"><span class="spec-key">Screen Capture</span><span class="spec-val">AXUIElement</span></div>
+        <div class="spec-row"><span class="spec-key">Speech</span><span class="spec-val">NSAccessibility</span></div>
+        <div class="spec-row"><span class="spec-key">Tests</span><span class="spec-val">42+ across 4 suites</span></div>
+        <div class="spec-row"><span class="spec-key">License</span><span class="spec-val">MIT</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ABOUT + ROADMAP ═══ -->
+<div class="sec" id="about" style="border-bottom:1px solid var(--border)">
+  <div class="wrap">
+    <div class="sec-label rv">About</div>
+    <h2 class="rv">Built at the intersection of three disciplines<span class="accent">.</span></h2>
+
+    <div class="about-grid">
+      <div class="about-card rv">
+        <div class="about-name">Asim Sayed</div>
+        <div class="about-role">UW HCDE &middot; Seattle</div>
+        <div class="about-bio">MS student in Human Centered Design &amp; Engineering at the University of Washington. Previously Senior UX Designer at Fractal Ink, full-stack engineer at Mastek, and co-founder of The Pravachan (20K+ students, $100K+ ARR). Work impacting 100M+ users across banking, finance, and healthcare.</div>
+        <div class="about-links">
+          <a href="https://asimsayed.com" target="_blank">Website &nearr;</a>
+          <a href="https://github.com/AsimSayed" target="_blank">GitHub &nearr;</a>
+          <a href="mailto:asim.g.sayed@gmail.com">Email &nearr;</a>
+        </div>
+      </div>
+
+      <div class="roadmap rv d1">
+        <div class="roadmap-item">
+          <span class="roadmap-name">Phase 1 — Core parsing, navigation, serialization, speech</span>
+          <span class="roadmap-status done">Complete</span>
+        </div>
+        <div class="roadmap-item">
+          <span class="roadmap-name">Phase 2 — macOS integration, screen reader capture via AXUIElement</span>
+          <span class="roadmap-status active">In Progress</span>
+        </div>
+        <div class="roadmap-item">
+          <span class="roadmap-name">Phase 3 — Error handling polish, VoiceOver conflict mitigation, menu bar mode</span>
+          <span class="roadmap-status planned">Planned</span>
+        </div>
+        <div class="roadmap-item">
+          <span class="roadmap-name">v2 — Matrices, piecewise functions, summation/product, logical quantifiers</span>
+          <span class="roadmap-status planned">Future</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CROSSROADS CTA ═══ -->
+<div class="crossroads">
+  <div class="wrap" style="position:relative;z-index:1">
+    <div class="sec-label rv" style="justify-content:center;text-align:center">The choice</div>
+    <h2 class="rv" style="text-align:center;margin-bottom:48px">Two ways to do math homework<span class="accent">.</span></h2>
+
+    <div class="cross-grid">
+      <div class="cross-card without rv">
+        <div class="cross-badge">Without SSR</div>
+        <div class="cross-title">Re-listening to the whole equation every time.</div>
+        <div class="cross-list">
+          Flat, linear audio with no structure<br>
+          Retype sub-expressions from memory<br>
+          Re-listen for the part you need<br>
+          Lose your place constantly<br>
+          Spend twice as long on half the work
+        </div>
+      </div>
+
+      <div class="cross-or">or</div>
+
+      <div class="cross-card with rv d1">
+        <div class="cross-badge">With SSR</div>
+        <div class="cross-title">Navigate to exactly what you need. Extract it. Move on.</div>
+        <div class="cross-list" style="color:var(--text)">
+          Tree structure you can drill into<br>
+          Spoken feedback at every level<br>
+          Extract any node with one keypress<br>
+          Never leave your text editor<br>
+          Work at the speed of thought, not sound
+        </div>
+        <a href="https://github.com/AsimSayed/symbolic-state-recall/tree/feature/screen-reader-capture" target="_blank" class="btn-blue" style="margin-top:24px;width:100%;text-align:center">Clone the Repo</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer-session">
+  <div class="wrap">
+    <div class="session-header"><span class="pulse"></span> Sample recall session</div>
+    <div class="session-feed" id="footerFeed">
+      <div class="feed-line code-line" data-delay="0"><span class="key">input</span><span class="val">int_0^1 x^2 dx = 1/3</span></div>
+      <div class="feed-line code-line" data-delay="300"><span class="key">parsed</span><span class="val hl">Equation: Integral = Fraction</span></div>
+      <div class="feed-line code-line" data-delay="600"><span class="key">recall</span><span class="val">Option+Space &rarr; entering recall mode</span></div>
+      <div class="feed-line code-line" data-delay="900"><span class="key">nav: 1</span><span class="val">"Line 1, equation"</span></div>
+      <div class="feed-line code-line" data-delay="1200"><span class="key">nav: L</span><span class="val">"Left side: definite integral"</span></div>
+      <div class="feed-line code-line" data-delay="1500"><span class="key">nav: 3</span><span class="val hl">"Integrand: x squared"</span></div>
+      <div class="feed-line code-line" data-delay="1800"><span class="key">insert</span><span class="val ok">x^2 &rarr; inserted at cursor</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bottom">
+  <div class="wrap">
+    <div class="footer-in">
+      <div class="footer-copy">&copy; 2026 Asim Sayed</div>
+      <div class="footer-brand">SSR</div>
+      <div class="footer-links">
+        <a href="https://github.com/AsimSayed/symbolic-state-recall" target="_blank">GitHub</a>
+        <a href="https://github.com/AsimSayed/symbolic-state-recall/issues" target="_blank">Issues</a>
+        <a href="https://asimsayed.com" target="_blank">asimsayed.com</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ JS ═══ -->
+<script>
+// Theme
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-tog button').forEach(b => b.classList.remove('active'));
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+}
+
+// Code typing animation
+function animateCode(id) {
+  const block = document.getElementById(id);
+  if (!block) return;
+  const lines = block.querySelectorAll('.code-line');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        lines.forEach(line => {
+          const delay = parseInt(line.dataset.delay) || 0;
+          setTimeout(() => line.classList.add('typed'), delay);
+        });
+        obs.unobserve(block);
+      }
+    });
+  }, { threshold: 0.2 });
+  obs.observe(block);
+}
+animateCode('termDemo');
+animateCode('footerFeed');
+
+// Scroll reveal
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('vis'); revealObs.unobserve(e.target); }
+  });
+}, { threshold: 0.08 });
+document.querySelectorAll('.rv').forEach(el => revealObs.observe(el));
+
+// Mobile menu
+let menuOpen = false;
+const menuToggle = document.getElementById('menuToggle');
+const mobileMenu = document.getElementById('mobileMenu');
+
+function closeMenu() {
+  menuOpen = false;
+  mobileMenu.classList.remove('open');
+  menuToggle.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+if (menuToggle) {
+  menuToggle.addEventListener('click', () => {
+    menuOpen = !menuOpen;
+    mobileMenu.classList.toggle('open', menuOpen);
+    menuToggle.classList.toggle('open', menuOpen);
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+  });
+}
+
+// ═══ SCROLLYTELLING ═══
+const scrollSteps = document.querySelectorAll('.scroll-step');
+const vizLayers = [
+  document.getElementById('vizLayer1'),
+  document.getElementById('vizLayer2'),
+  document.getElementById('vizLayer3'),
+  document.getElementById('vizLayer4')
+];
+
+function updateScrollytelling() {
+  let activeIndex = 0;
+  scrollSteps.forEach((step, i) => {
+    const rect = step.getBoundingClientRect();
+    const viewCenter = window.innerHeight * 0.5;
+    if (rect.top < viewCenter && rect.bottom > viewCenter * 0.3) {
+      activeIndex = i;
+    }
+  });
+  scrollSteps.forEach((step, i) => {
+    step.classList.toggle('active', i === activeIndex);
+  });
+  vizLayers.forEach((layer, i) => {
+    if (!layer) return;
+    if (i === activeIndex) {
+      layer.classList.remove('hidden');
+      layer.classList.add('visible');
+    } else {
+      layer.classList.add('hidden');
+      layer.classList.remove('visible');
+    }
+  });
+}
+
+window.addEventListener('scroll', updateScrollytelling, { passive: true });
+updateScrollytelling();
+</script>
+
+</body>
+</html>
