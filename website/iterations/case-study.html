@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>We Are All Blind — Case Study | Math Recall</title>
+<meta name="description" content="How co-designing with a blind computer science student at the University of Washington led to Math Recall — a structured recall tool for navigating math equations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+
+:root {
+  --bg: #fafbfc;
+  --bg-warm: #f5f3f0;
+  --bg-card: #ffffff;
+  --bg-subtle: #f0f1f4;
+  --text-1: #1a1d26;
+  --text-2: #5c6274;
+  --text-3: #9ba2b4;
+  --blue: #4a7cec;
+  --blue-soft: rgba(74,124,236,.08);
+  --green: #16a34a;
+  --border: rgba(0,0,0,.07);
+  --border-hover: rgba(0,0,0,.14);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+  --radius: 20px;
+  --radius-sm: 14px;
+  --radius-xs: 10px;
+  --body: 'Geist', -apple-system, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  --heading: 'Space Grotesk', -apple-system, system-ui, sans-serif;
+  --spring: cubic-bezier(.34,1.56,.64,1);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);background:var(--bg);color:var(--text-1);
+  line-height:1.7;-webkit-font-smoothing:antialiased}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(250,251,252,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);padding:0 40px}
+.nav-inner{max-width:1080px;margin:0 auto;height:56px;
+  display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:var(--heading);font-size:18px;font-weight:700;
+  color:var(--text-1);text-decoration:none;letter-spacing:-0.03em}
+.nav-logo span{color:var(--blue)}
+.nav-back{font-family:var(--mono);font-size:13px;color:var(--text-3);
+  text-decoration:none;transition:color .2s}
+.nav-back:hover{color:var(--blue)}
+
+/* ── LAYOUT ── */
+.wrap{max-width:760px;margin:0 auto;padding:0 24px}
+
+/* ── HERO ── */
+.hero{padding:140px 0 80px}
+.hero-label{display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:24px}
+.hero-label::before{content:"";width:12px;height:1px;background:var(--blue)}
+.hero h1{font-family:var(--heading);font-size:clamp(36px,5vw,52px);
+  font-weight:700;line-height:1.15;letter-spacing:-0.035em;margin-bottom:24px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:24px;font-size:14px;color:var(--text-3);
+  margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+.hero-meta span{display:flex;align-items:center;gap:6px}
+.hero-lede{font-size:19px;line-height:1.75;color:var(--text-2);max-width:640px}
+
+/* ── BADGES ── */
+.badges{display:flex;gap:24px;align-items:center;margin:48px 0;
+  padding:32px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);box-shadow:var(--shadow-sm)}
+.badges img{height:80px;width:auto}
+.badges-text{font-size:14px;color:var(--text-2);line-height:1.6}
+.badges-text strong{color:var(--text-1)}
+
+/* ── SECTIONS ── */
+.section{padding:64px 0;border-top:1px solid var(--border)}
+.section-label{display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:20px}
+.section-label::before{content:"";width:12px;height:1px;background:var(--blue)}
+.section h2{font-family:var(--heading);font-size:28px;font-weight:700;
+  letter-spacing:-0.02em;margin-bottom:20px;line-height:1.25}
+.section h3{font-family:var(--heading);font-size:20px;font-weight:600;
+  letter-spacing:-0.01em;margin-top:40px;margin-bottom:12px}
+
+/* ── PROSE ── */
+.prose{font-size:16px;line-height:1.85;color:var(--text-2)}
+.prose p+p{margin-top:20px}
+.prose strong{color:var(--text-1);font-weight:600}
+.prose em{font-style:italic}
+
+/* ── PHOTOS ── */
+.photo{margin:40px 0;border-radius:var(--radius-sm);overflow:hidden;
+  border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.photo img{width:100%;height:auto;display:block}
+.photo-caption{font-family:var(--mono);font-size:12px;color:var(--text-3);
+  padding:14px 20px;background:var(--bg-card);letter-spacing:.02em}
+
+.photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:40px 0}
+.photo-pair .photo{margin:0}
+
+/* ── QUOTES ── */
+.pullquote{margin:48px 0;padding:32px 40px;background:var(--bg-card);
+  border:1px solid var(--border);border-left:3px solid var(--blue);
+  border-radius:var(--radius-sm);box-shadow:var(--shadow-sm)}
+.pullquote blockquote{font-family:var(--heading);font-size:21px;font-weight:500;
+  line-height:1.6;letter-spacing:-0.01em;color:var(--text-1)}
+.pullquote cite{display:block;margin-top:12px;font-family:var(--mono);
+  font-size:12px;color:var(--text-3);font-style:normal;letter-spacing:.03em}
+
+/* ── FINDINGS ── */
+.finding{margin:32px 0;padding:24px 28px;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:var(--radius-xs);
+  box-shadow:var(--shadow-sm)}
+.finding-title{font-family:var(--heading);font-size:16px;font-weight:600;
+  margin-bottom:8px;letter-spacing:-0.01em}
+.finding p{font-size:15px;color:var(--text-2);line-height:1.7}
+
+/* ── PRINCIPLES ── */
+.principle{display:flex;gap:20px;margin:20px 0;padding:24px 28px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-xs);box-shadow:var(--shadow-sm)}
+.principle-num{font-family:var(--heading);font-size:28px;font-weight:700;
+  color:var(--blue);flex-shrink:0;width:36px}
+.principle-body h4{font-family:var(--heading);font-size:15px;font-weight:600;
+  margin-bottom:6px}
+.principle-body p{font-size:14px;color:var(--text-2);line-height:1.65}
+
+/* ── TEAM ── */
+.team-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px}
+.team-card{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-xs);padding:20px;box-shadow:var(--shadow-sm)}
+.team-card h4{font-family:var(--heading);font-size:16px;font-weight:600;
+  margin-bottom:4px}
+.team-card p{font-size:13px;color:var(--text-3);line-height:1.5}
+
+/* ── CONCEPTS ── */
+.concept{margin:20px 0;padding:24px 28px;background:var(--bg-card);
+  border:1px solid var(--border);border-radius:var(--radius-xs);
+  box-shadow:var(--shadow-sm)}
+.concept-chosen{border-left:3px solid var(--green)}
+.concept h4{font-family:var(--heading);font-size:16px;font-weight:600;
+  margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.concept-tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;padding:3px 8px;border-radius:100px}
+.concept-tag.chosen{background:rgba(22,163,74,.08);color:var(--green)}
+.concept-tag.explored{background:var(--bg-subtle);color:var(--text-3)}
+.concept p{font-size:14px;color:var(--text-2);line-height:1.65}
+
+/* ── FOOTER ── */
+footer{padding:48px 0 32px;text-align:center}
+footer p{font-size:13px;color:var(--text-3)}
+footer a{color:var(--blue);text-decoration:none}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .nav{padding:0 20px}
+  .photo-pair{grid-template-columns:1fr}
+  .team-grid{grid-template-columns:1fr 1fr}
+  .badges{flex-direction:column;text-align:center}
+}
+@media(max-width:480px){
+  .team-grid{grid-template-columns:1fr}
+}
+
+/* ── REDUCED MOTION ── */
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation:none!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+  <nav class="nav" role="navigation" aria-label="Case study navigation">
+    <div class="nav-inner">
+      <a href="v3-soft.html" class="nav-logo">Math<span>Recall</span></a>
+      <a href="v3-soft.html" class="nav-back">&larr; Back to home</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ═══ HERO ═══ -->
+    <div class="hero">
+      <div class="wrap">
+        <div class="hero-label">Case Study</div>
+        <h1>We Are All Blind</h1>
+        <div class="hero-meta">
+          <span>HCDE 515 &middot; University of Washington</span>
+          <span>Winter 2026</span>
+          <span>Instructor: Prof. Leah Findlater</span>
+        </div>
+        <p class="hero-lede">Sighted students glance at their work to recover state. Blind students navigate line-by-line through every character to find a single term, shattering their flow. We partnered with a blind computer science student to find out what's actually going wrong — and to design something better.</p>
+      </div>
+    </div>
+
+    <!-- ═══ PARTNER ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">Design Partner</div>
+        <h2>Abdallah Altahaineh</h2>
+        <div class="prose">
+          <p>Abdallah is a Computer Science student at the University of Washington from Dubai. He has near-total blindness — he can perceive large changes in light and shadow, silhouettes of buildings, but no detail. He navigates the world and his coursework almost entirely through his screen reader and his memory.</p>
+          <p>He relies on VoiceOver across his Apple ecosystem — MacBook, iPhone, iPad. He uses Pages and Notes for math, VS Code for coding, and has memorized the full keyboard layout including every special character. He walks 7,000 to 10,000 steps a day, plans his own camping trips, and navigates campus without a cane. When asked how he walks in a straight line: <em>"I hope. That's very much what I can say."</em></p>
+          <p>We worked with Abdallah across three in-person sessions at Maple Hall over the course of the quarter — a need-finding interview, a co-design session where we watched him solve real calculus problems, and a final session where he tested our prototype.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ THE PROBLEM ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">The Problem</div>
+        <h2>The barrier is memory, not comprehension</h2>
+        <div class="prose">
+          <p>We went in expecting to find problems with math notation, screen reader pronunciation, or equation formatting. We were wrong. Abdallah is strong at math. He's strong at STEM in general. The problem is far more fundamental than we expected.</p>
+          <p>Sighted students use the screen as persistent external working memory. When you're solving a multi-step equation, you glance up at the original expression, check a coefficient, and keep writing. You don't even think about it. It takes less than a second.</p>
+          <p>For Abdallah, that "glance" becomes a full navigation event. He has to stop writing, arrow up through his document line-by-line, listen to content character-by-character until he finds what he needs, hold it in his head, navigate back to his insertion point, and resume. Every time he needs to check a value, the cycle repeats. And every cycle costs him his place in the problem.</p>
+        </div>
+
+        <div class="pullquote">
+          <blockquote>&ldquo;I keep having to scroll up to reread the original equation and copy it down. Sighted students can glance and keep typing. I have to keep navigating back and forth.&rdquo;</blockquote>
+          <cite>— Abdallah, need-finding session</cite>
+        </div>
+
+        <div class="prose">
+          <p>This creates what we came to call a <strong>cognitive load ceiling</strong>. The intrinsic complexity of the math — the actual thinking — gets compounded by the extraneous burden of mental state tracking. The harder the problem, the more intermediate values there are to hold, and the more navigations break his flow.</p>
+        </div>
+
+        <div class="photo">
+          <img src="codesign-session.jpg" alt="The full research team during the co-design session at Maple Hall. Abdallah works on his laptop while the team observes and documents." loading="lazy">
+          <div class="photo-caption">Co-design session at Maple Hall — Feb 21, 2026. Abdallah solves calculus problems while the team observes.</div>
+        </div>
+
+        <h3>What we observed</h3>
+
+        <div class="finding">
+          <div class="finding-title">Working memory is the bottleneck, not reasoning</div>
+          <p>Abdallah never struggled with the math itself. He struggled with holding intermediate values in memory while simultaneously reasoning through transformations. As he put it: "Working memory is the worst."</p>
+        </div>
+
+        <div class="finding">
+          <div class="finding-title">The scribe is a memory device, not a solver</div>
+          <p>During co-design, we gave Abdallah a human scribe. He never asked the scribe to solve anything. He asked them to recall: "Can you remind me what the equation was?", "What was the first term?", "Can you read what I have so far?" He was focused on doing the work. He just needed someone to hold state for him.</p>
+        </div>
+
+        <div class="finding">
+          <div class="finding-title">Clarification and recall are distinct needs</div>
+          <p>Abdallah drew a clear line: "Memory is when I completely forgot something. Clarifying is when I'm 90% sure but want to check." Two different interaction patterns, two different levels of urgency.</p>
+        </div>
+
+        <div class="finding">
+          <div class="finding-title">Mental retracing catches errors</div>
+          <p>Without visual scanning, Abdallah catches mistakes by mentally replaying his steps. When asked how he knew he'd forgotten something: "I retraced the steps in my head." Effective, but cognitively expensive.</p>
+        </div>
+
+        <div class="pullquote">
+          <blockquote>&ldquo;Math is mostly understanding and not memorizing. No one is memorizing when they're solving math. They're solving something.&rdquo;</blockquote>
+          <cite>— Abdallah, co-design session</cite>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COMPETITIVE ANALYSIS ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">Competitive Analysis</div>
+        <h2>What already exists — and what's missing</h2>
+        <div class="prose">
+          <p>We analyzed tools across the memory-offloading space: BrailleNote for braille-based notetaking, Plaud NotePin for wearable audio capture, Meta AI Glasses for hands-free descriptions, Quip for clipboard management. Each handles one piece of the problem — capture, or retrieval, or structured storage — but none of them connect these for cognitively demanding, real-time tasks like solving equations.</p>
+          <p>The gap is clear: effective memory offloading requires <strong>low-friction capture</strong>, <strong>structured indexing</strong>, and <strong>rapid non-linear retrieval</strong>. Existing tools fragment these across domains and none are built for the specific cognitive demands of blind users doing STEM work.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CO-DESIGN ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">Co-Design</div>
+        <h2>Abdallah solves calculus. We watch and learn.</h2>
+        <div class="prose">
+          <p>In our second session, we brought real math problems — implicit differentiation, related rates — and watched Abdallah work through them, first alone and then with a human scribe. The difference was immediate. With the scribe holding state, Abdallah could reason continuously without the scroll-listen-navigate-scroll cycle breaking his concentration.</p>
+          <p>But the most important moment came during brainstorming. I proposed a concept: a tool that would parse equations into structured trees, index every term, and let you summon any piece back to your cursor with a keyboard shortcut. Abdallah didn't just agree — he refined it on the spot:</p>
+        </div>
+
+        <div class="pullquote">
+          <blockquote>&ldquo;It could be a program that looks like a normal document but stores what I write in structured maps. If I type 2x + 3 = 9, the program automatically identifies left and right sides, breaks the left side into terms, stores them as keys and values. Then I could press a shortcut like 'Left 1' to retrieve 2x, 'Left 2' for 3, and 'Right' for 9.&rdquo;</blockquote>
+          <cite>— Abdallah, co-design session, elaborating on the proposed concept</cite>
+        </div>
+
+        <div class="prose">
+          <p>He went further: <em>"It should understand nested structures — numerator, denominator, inside parentheses — and store those too."</em> And then: <em>"I could actually code something like this. I'm planning to build an accessible study tool this summer."</em></p>
+        </div>
+
+        <div class="photo">
+          <img src="testing-session.jpg" alt="Abdallah testing the Math Recall prototype with team members watching and taking notes" loading="lazy">
+          <div class="photo-caption">Final testing session — Mar 21, 2026. Abdallah tests the working prototype.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DESIGN PRINCIPLES ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">Design Principles</div>
+        <h2>Six principles from the research</h2>
+        <div class="prose">
+          <p>These emerged from coding our session transcripts, mapping Abdallah's pain points, and testing our assumptions against his actual workflow.</p>
+        </div>
+
+        <div class="principle">
+          <div class="principle-num">1</div>
+          <div class="principle-body">
+            <h4>Don't interrupt the current context to retrieve prior information</h4>
+            <p>Document navigation is a cognitive cost. Retrieval should not require scrolling, mode-switching, or cursor relocation.</p>
+          </div>
+        </div>
+
+        <div class="principle">
+          <div class="principle-num">2</div>
+          <div class="principle-body">
+            <h4>Don't disrupt cognitive flow for recall or verification</h4>
+            <p>Recalling intermediate values should not reset screen reader focus or require changing reading modes. Support real-time state recall while preserving cursor position.</p>
+          </div>
+        </div>
+
+        <div class="principle">
+          <div class="principle-num">3</div>
+          <div class="principle-body">
+            <h4>Preserve user agency in logical reasoning</h4>
+            <p>The system provides memory scaffolding, not automated solving. It should never complete transformations or solve steps on behalf of the user.</p>
+          </div>
+        </div>
+
+        <div class="principle">
+          <div class="principle-num">4</div>
+          <div class="principle-body">
+            <h4>Preserve structural and semantic integrity of notation</h4>
+            <p>The system recognizes domain-specific notation — "B'" not "B Prime," "^2" not "rectangle" — and maintains mathematical structure for recall.</p>
+          </div>
+        </div>
+
+        <div class="principle">
+          <div class="principle-num">5</div>
+          <div class="principle-body">
+            <h4>Operate within existing infrastructure</h4>
+            <p>Integrate into established accessibility ecosystems — VoiceOver, macOS, Pages, Notes — rather than replacing workflows the user already trusts.</p>
+          </div>
+        </div>
+
+        <div class="principle">
+          <div class="principle-num">6</div>
+          <div class="principle-body">
+            <h4>Keep intermediate mental steps persistently available</h4>
+            <p>Multi-step tasks generate meaningful but short-lived intermediate states. The system stabilizes and indexes these so they can be recalled without mental reconstruction.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ THREE CONCEPTS ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">Design Concepts</div>
+        <h2>Three directions explored</h2>
+        <div class="prose">
+          <p>We developed three design concepts, each addressing the core problem through a different modality. All three went through critique with Abdallah and our course instructors.</p>
+        </div>
+
+        <div class="concept concept-chosen">
+          <h4>Symbolic State Recall via Hotkeys <span class="concept-tag chosen">Built</span></h4>
+          <p>A keyboard-driven system that parses equations into a navigable tree and lets users summon any term with a compact query grammar. No new symbols needed — just numbers and L/R. This became Math Recall.</p>
+        </div>
+
+        <div class="concept">
+          <h4>Haptic Syntax Ring <span class="concept-tag explored">Explored</span></h4>
+          <p>A wearable ring that translates mathematical structure hierarchy into tactile feedback — pressure and vibration patterns encoding nesting depth, with physical gestures for save and replay.</p>
+        </div>
+
+        <div class="concept">
+          <h4>AI Voice Scribe <span class="concept-tag explored">Explored</span></h4>
+          <p>A virtual AI companion running alongside existing tools, providing conversational voice-based retrieval of previously written steps. "What was the value of x?"</p>
+        </div>
+
+        <div class="prose">
+          <p>We chose the hotkey-based recall system because it most directly addressed the core need — structured random-access recall without leaving the insertion point. It aligned with what Abdallah himself had described during brainstorming, and it could integrate into his existing macOS workflow without requiring new hardware or AI dependencies.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ THE RESULT ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">The Result</div>
+        <h2>Testing the prototype</h2>
+        <div class="prose">
+          <p>We built a working prototype in Swift — a command-line tool demonstrating the recall grammar, AST parsing, tree navigation, and spoken feedback loop. In our final session, Abdallah tested it with both single-line and multi-line equations.</p>
+          <p>The query grammar works like this: you press <strong>Option+Space</strong> to enter recall mode, then type a path — <code>1 L 1</code> for the first term on the left side of line 1, <code>1 R 1</code> for the first term on the right. After every token, the system speaks what it found. You hear "Line 1", "Left side, 2 items", "x squared" as you navigate deeper. Press Space to insert the selected term at your cursor. Backspace retraces one level up. Escape exits.</p>
+          <p>Fractions, integrals, powers, and roots all expand into child nodes you can drill into. The grammar scales to any depth without new commands.</p>
+        </div>
+
+        <div class="pullquote">
+          <blockquote>&ldquo;If a human scribe is a 10, this tool is like a 9 or 9.5.&rdquo;</blockquote>
+          <cite>— Abdallah, after testing the prototype</cite>
+        </div>
+
+        <div class="prose">
+          <p>He liked the left/right organization, term-by-term navigation, and how fractions opened into numerator and denominator child nodes. He suggested improvements: seamless switching between typing and recall mode, lateral navigation between sides without backtracking, and extending the system to multi-file coding tasks.</p>
+          <p>Critically, he distinguished between tool confusion and task confusion: <em>"What's confusing me is not the steps we can track — what's confusing me is what the question itself wants us to do."</em> The recall mechanism was clear. The math was the hard part — as it should be.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ WHAT'S NEXT ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">What's Next</div>
+        <h2>From prototype to product</h2>
+        <div class="prose">
+          <p>The CLI prototype validated the interaction model. Now Math Recall is becoming a native macOS app — built with Swift and AppKit, running as a background service that intercepts the keyboard trigger, communicates with VoiceOver through NSAccessibility protocols, and inserts text directly into the active text field.</p>
+          <p>It won't feel like a separate app. It will feel like a native layer woven into the screen reader experience — invisible until you need it, instant when you do.</p>
+          <p>Math Recall doesn't make math easier. It makes math <strong>fair</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TEAM ═══ -->
+    <div class="section">
+      <div class="wrap">
+        <div class="section-label">Team</div>
+        <h2>Research team</h2>
+        <div class="badges">
+          <img src="uw-badge.png" alt="University of Washington seal">
+          <img src="hcde-badge.png" alt="Human Centered Design & Engineering">
+          <div class="badges-text">
+            <strong>HCDE 515: Accessibility and Inclusive Design</strong><br>
+            University of Washington, Winter 2026
+          </div>
+        </div>
+        <div class="team-grid">
+          <div class="team-card">
+            <h4>Asim Sayed</h4>
+            <p>Lead researcher, facilitator, prototype developer. MS in HCDE.</p>
+          </div>
+          <div class="team-card">
+            <h4>Jiyae Choi</h4>
+            <p>Research synthesis, transcription, insight coding, session notetaker.</p>
+          </div>
+          <div class="team-card">
+            <h4>Nicolas Rodriguez</h4>
+            <p>Co-design facilitation, haptic ring concept, activity lead.</p>
+          </div>
+          <div class="team-card">
+            <h4>Penny Yeh</h4>
+            <p>Documentation, competitive analysis, photo/video, AI Scribe concept.</p>
+          </div>
+        </div>
+        <div class="prose" style="margin-top:32px">
+          <p>With <strong>Abdallah Altahaineh</strong> as design partner and co-designer. This research was conducted under the supervision of <strong>Prof. Leah Findlater</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Math Recall &middot; University of Washington HCDE &middot; <a href="v3-soft.html">Back to home</a></p>
+  </footer>
+
+  <script src="annotate.js"></script>
+</body>
+</html>
