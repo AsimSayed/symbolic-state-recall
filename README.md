@@ -20,19 +20,18 @@ The project is also a case study in designing thoughtfully with AI: deterministi
 
 ## Supported math (v1: Calculus)
 
-Equations, fractions, powers, square roots, nth roots, definite and indefinite integrals, derivatives, limits, and named functions (`sin`, `cos`, `tan`, `ln`, `log`, etc.).
+- Equations: `x^2 + 1 = 5`
+- Fractions: `(x+3)/2`
+- Powers: `x^2`, `e^(2t)`
+- Square roots: `sqrt(x+1)`
+- Nth roots: `root(3, x)`
+- Definite integrals: `int_0^1 x^2 dx`
+- Indefinite integrals: `int x^2 dx`
+- Derivatives: `d/dx(x^2+3x)`
+- Limits: `lim_x->0 sin(x)/x`
+- Functions: `sin(x)`, `cos(x)`, `tan(x)`, `ln(y^3)`, `log(x)`
 
 Deferred to v2: matrices, piecewise functions, systems of equations, summation/product notation, logical quantifiers.
-
-## Status
-
-| Phase | What | State |
-|-------|------|-------|
-| 1 | Core parser, navigation engine, serializer (30 unit tests) | Complete |
-| 2 | Global hotkey, clipboard monitoring, focused text reading, prose extraction, floating dock bar, CGEvent tap, accessibility permissions | Complete |
-| 3 | Cursor-aware reading, recall history, multi-digit input, tolerant multi-line parsing, UI polish | In progress (`feature/ui-floating-panel`) |
-
-Phase 2 and 3 work lives on the `feature/ui-floating-panel` branch and has not been merged to main yet.
 
 ## Building
 
