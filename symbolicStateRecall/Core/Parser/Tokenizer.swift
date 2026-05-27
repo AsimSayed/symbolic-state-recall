@@ -128,7 +128,7 @@ class Tokenizer {
     // MARK: - Private Helpers
 
     private func skipWhitespace() {
-        while position < input.count && input[position].isWhitespace {
+        while position < input.count && (input[position].isWhitespace || input[position] == "\u{00A0}") {
             position += 1
         }
     }

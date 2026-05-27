@@ -99,29 +99,34 @@ class Parser {
 
     // MARK: - Grammar Rules
 
-    /// equation → expression ('=' expression)?
+    /// equation → expression ('=' expression)*
     private func parseEquation() throws -> MathNode {
-        let left = try parseExpression()
+        var parts: [MathNode] = []
+        parts.append(try parseExpression())
 
-        if current.type == .equals {
+        while current.type == .equals {
             advance()
-            let right = try parseExpression()
-
-            let leftSide = MathNode(type: .side, value: "L", children: flattenTopLevel(left))
-            leftSide.label = "left side"
-
-            let rightSide = MathNode(type: .side, value: "R", children: flattenTopLevel(right))
-            rightSide.label = "right side"
-
-            let equation = MathNode(type: .equation, value: "=", children: [leftSide, rightSide])
-            equation.label = "equation"
-            return equation
+            parts.append(try parseExpression())
         }
 
-        // No equals sign — wrap in a single side
-        let side = MathNode(type: .side, value: "L", children: flattenTopLevel(left))
-        side.label = "left side"
-        return side
+        if parts.count == 1 {
+            // No equals sign — single part
+            let side = MathNode(type: .side, value: "1", children: flattenTopLevel(parts[0]))
+            side.label = "part 1"
+            return side
+        }
+
+        // Multiple parts separated by =
+        var children: [MathNode] = []
+        for (i, part) in parts.enumerated() {
+            let side = MathNode(type: .side, value: "\(i + 1)", children: flattenTopLevel(part))
+            side.label = "part \(i + 1)"
+            children.append(side)
+        }
+
+        let equation = MathNode(type: .equation, value: "=", children: children)
+        equation.label = "equation"
+        return equation
     }
 
     /// Flatten an expression into top-level recallable items.
@@ -187,7 +192,8 @@ class Parser {
     private func isImplicitMultiply() -> Bool {
         let type = current.type
         switch type {
-        case .number, .variable, .leftParen, .sqrtKeyword, .rootKeyword:
+        case .number, .variable, .leftParen, .sqrtKeyword, .rootKeyword,
+             .intKeyword, .limKeyword:
             return true
         case .funcName:
             return true
@@ -261,7 +267,15 @@ class Parser {
             return try parseIntegral()
 
         case .dKeyword:
-            return try parseDerivative()
+            // Only parse as derivative if followed by '/' (d/dx pattern)
+            if pos + 1 < tokens.count && tokens[pos + 1].type == .divide {
+                return try parseDerivative()
+            }
+            // Otherwise treat 'd' as a variable
+            let token = advance()
+            let node = MathNode(type: .value, value: token.text)
+            node.label = token.text
+            return node
 
         case .limKeyword:
             return try parseLimit()
@@ -348,12 +362,12 @@ class Parser {
         if let lo = lower, let hi = upper {
             children = [lo, hi, integrand, varNode]
             let node = MathNode(type: .integral, children: children)
-            node.label = "integral from \(lo.label) to \(hi.label) of \(integrand.label) d\(diffVar)"
+            node.label = "integral from \(lo.label) to \(hi.label) of \(integrand.label), d\(diffVar)"
             return node
         } else {
             children = [integrand, varNode]
             let node = MathNode(type: .integral, children: children)
-            node.label = "integral of \(integrand.label) d\(diffVar)"
+            node.label = "integral of \(integrand.label), d\(diffVar)"
             return node
         }
     }
@@ -456,6 +470,10 @@ class Parser {
                 node.label = "\(base.label) squared"
             } else if exp.value == "3" {
                 node.label = "\(base.label) cubed"
+            } else if exp.value == "4" {
+                node.label = "\(base.label) to the fourth"
+            } else if exp.value == "5" {
+                node.label = "\(base.label) to the fifth"
             } else {
                 node.label = "\(base.label) to the power \(exp.label)"
             }
@@ -472,6 +490,45 @@ extension Parser {
         let index = TopLevelIndex(root: root)
         return (root, index)
     }
+
+    /// Parse multiple lines of equations.
+    /// Each non-empty line becomes a separate equation indexed by line number.
+    func parseMultiLine(_ input: String) throws -> (roots: [MathNode], index: TopLevelIndex) {
+        let lines = input.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var roots: [MathNode] = []
+        for line in lines {
+            let root = try parse(line)
+            roots.append(root)
+        }
+
+        let index = TopLevelIndex(roots: roots)
+        return (roots, index)
+    }
+
+    /// Parse multi-line input tolerantly — skips lines that fail to parse.
+    /// Returns only successfully parsed equations. Throws only if nothing parses.
+    func parseMultiLineTolerant(_ input: String) throws -> (roots: [MathNode], index: TopLevelIndex) {
+        let lines = input.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var roots: [MathNode] = []
+        for line in lines {
+            if let root = try? parse(line) {
+                roots.append(root)
+            }
+        }
+
+        guard !roots.isEmpty else {
+            throw ParserError.invalidExpression("No recognizable math found")
+        }
+
+        let index = TopLevelIndex(roots: roots)
+        return (roots, index)
+    }
 }
 
 // MARK: - Top-Level Index
@@ -481,8 +538,17 @@ struct TopLevelIndex {
     /// Storage: lineIndex → ("L" or "R") → [MathNode]
     private var index: [Int: [String: [MathNode]]] = [:]
 
+    /// Initialize with a single root (single-line mode).
     init(root: MathNode) {
         buildIndex(root: root, line: 1)
+    }
+
+    /// Initialize with multiple roots (multi-line mode).
+    /// Each root is assigned a line number starting from 1.
+    init(roots: [MathNode]) {
+        for (i, root) in roots.enumerated() {
+            buildIndex(root: root, line: i + 1)
+        }
     }
 
     private mutating func buildIndex(root: MathNode, line: Int) {
@@ -500,7 +566,7 @@ struct TopLevelIndex {
             index[line, default: [:]][root.value] = root.children
         default:
             // Wrap in left side
-            index[line, default: [:]][" L"] = [root]
+            index[line, default: [:]][ "L"] = [root]
         }
     }
 
@@ -529,8 +595,13 @@ struct TopLevelIndex {
         return index.keys.sorted()
     }
 
-    /// Available sides for a line.
+    /// Available parts for a line.
     func sides(line: Int) -> [String] {
-        return (index[line]?.keys.sorted()) ?? []
+        return (index[line]?.keys.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }) ?? []
+    }
+
+    /// Get the total number of lines.
+    var lineCount: Int {
+        return index.count
     }
 }

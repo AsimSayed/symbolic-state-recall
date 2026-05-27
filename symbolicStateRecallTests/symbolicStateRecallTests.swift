@@ -82,9 +82,9 @@ class ParserTests: XCTestCase {
     func testSimpleEquation() throws {
         let node = try parser.parse("x = 5")
         XCTAssertEqual(node.type, .equation)
-        XCTAssertEqual(node.children.count, 2)  // left side, right side
-        XCTAssertEqual(node.children[0].value, "L")
-        XCTAssertEqual(node.children[1].value, "R")
+        XCTAssertEqual(node.children.count, 2)  // part 1, part 2
+        XCTAssertEqual(node.children[0].value, "1")
+        XCTAssertEqual(node.children[1].value, "2")
     }
 
     func testPowerExpression() throws {
@@ -165,6 +165,15 @@ class ParserTests: XCTestCase {
         XCTAssertEqual(item.children.count, 3)  // variable, approach, expression
     }
 
+    func testThreePartEquation() throws {
+        let node = try parser.parse("a = b = c")
+        XCTAssertEqual(node.type, .equation)
+        XCTAssertEqual(node.children.count, 3)  // parts 1, 2, 3
+        XCTAssertEqual(node.children[0].value, "1")
+        XCTAssertEqual(node.children[1].value, "2")
+        XCTAssertEqual(node.children[2].value, "3")
+    }
+
     func testAdditionSplitsTopLevel() throws {
         let node = try parser.parse("x^2 + 3x + 5 = 20")
         XCTAssertEqual(node.type, .equation)
@@ -179,14 +188,14 @@ class ParserTests: XCTestCase {
     func testTopLevelIndex() throws {
         let (_, index) = try parser.parseAndIndex("x^2 + 3x = 5")
 
-        XCTAssertEqual(index.count(line: 1, side: "L"), 2)
-        XCTAssertEqual(index.count(line: 1, side: "R"), 1)
+        XCTAssertEqual(index.count(line: 1, side: "1"), 2)
+        XCTAssertEqual(index.count(line: 1, side: "2"), 1)
 
-        let firstLeft = index.resolve(line: 1, side: "L", position: 1)
+        let firstLeft = index.resolve(line: 1, side: "1", position: 1)
         XCTAssertNotNil(firstLeft)
         XCTAssertEqual(firstLeft?.type, .power)
 
-        let rightItem = index.resolve(line: 1, side: "R", position: 1)
+        let rightItem = index.resolve(line: 1, side: "2", position: 1)
         XCTAssertNotNil(rightItem)
         XCTAssertEqual(rightItem?.value, "5")
     }
@@ -199,18 +208,18 @@ class ParserTests: XCTestCase {
         // Should have left and right sides
         XCTAssertEqual(root.type, .equation)
 
-        // Left side: integral + ln(y^3)
-        XCTAssertEqual(index.count(line: 1, side: "L"), 2)
+        // Part 1: integral + ln(y^3)
+        XCTAssertEqual(index.count(line: 1, side: "1"), 2)
 
-        // Right side: e^t
-        XCTAssertEqual(index.count(line: 1, side: "R"), 1)
+        // Part 2: e^t
+        XCTAssertEqual(index.count(line: 1, side: "2"), 1)
 
-        // First item on left should be integral
-        let integral = index.resolve(line: 1, side: "L", position: 1)
+        // First item on part 1 should be integral
+        let integral = index.resolve(line: 1, side: "1", position: 1)
         XCTAssertEqual(integral?.type, .integral)
 
-        // Right side should be power (e^t)
-        let rhs = index.resolve(line: 1, side: "R", position: 1)
+        // Part 2 should be power (e^t)
+        let rhs = index.resolve(line: 1, side: "2", position: 1)
         XCTAssertEqual(rhs?.type, .power)
     }
 }
@@ -318,6 +327,150 @@ class NavigationTests: XCTestCase {
         }
         XCTAssertTrue(hasExit)
     }
+
+    // MARK: - Tolerance Tests
+
+    func testSingleLineSingleSideSkipsToIndex() throws {
+        // Expression with no equals — should skip line and side selection
+        try engine.load(equation: "x^2 + 3")
+        engine.trigger()
+
+        // Should be able to type index directly (no L/R needed)
+        engine.input(token: "1")
+
+        XCTAssertNotNil(engine.selectedNode)
+        XCTAssertEqual(engine.selectedNode?.type, .power)  // x^2
+    }
+
+    func testSingleLineEquationRequiresSide() throws {
+        // Equation with equals — should require L or R
+        try engine.load(equation: "x^2 = 5")
+        engine.trigger()
+
+        // Typing L then 1 should work
+        engine.input(token: "L")
+        engine.input(token: "1")
+
+        XCTAssertNotNil(engine.selectedNode)
+        XCTAssertEqual(engine.selectedNode?.type, .power)  // x^2
+    }
+
+    func testSwitchSideAfterSelection() throws {
+        // After selecting left side, typing R should switch to right
+        try engine.load(equation: "x^2 = 5")
+        engine.trigger()
+        engine.input(token: "L")
+        engine.input(token: "R")  // Switch to right side
+
+        // Now select item 1 on right side
+        engine.input(token: "1")
+
+        XCTAssertNotNil(engine.selectedNode)
+        XCTAssertEqual(engine.selectedNode?.value, "5")
+    }
+
+    func testDigitWhenExpectingSideOnSingleSide() throws {
+        // Multi-line where one line has single side
+        // This tests the input() tolerance path for pendingSide == nil + digit + single side
+        try engine.loadMultiLine(equations: "x + 3\ny = 5")
+        engine.trigger()
+
+        // Line 1 (expression, single side) — type line then directly type index
+        engine.input(token: "1")  // selects line 1, auto-selects L side
+        engine.input(token: "1")  // should resolve to item 1 (x)
+
+        XCTAssertNotNil(engine.selectedNode)
+    }
+}
+
+class ParserEdgeCaseTests: XCTestCase {
+
+    let parser = Parser()
+
+    func testNegativeNumberAtStart() throws {
+        let node = try parser.parse("-3x^2 + 5 = 0")
+        XCTAssertEqual(node.type, .equation)
+        // Part 1 should have 2 items: -3x^2, +5
+        let part1 = node.children[0]
+        XCTAssertEqual(part1.children.count, 2)
+        // First item should contain "negative" in its label
+        XCTAssertTrue(part1.children[0].label.contains("negative"))
+    }
+
+    func testNestedFractions() throws {
+        let node = try parser.parse("(a/b)/(c/d)")
+        let outerFrac = node.children[0]
+        XCTAssertEqual(outerFrac.type, .fraction)
+        XCTAssertEqual(outerFrac.children.count, 2)
+    }
+
+    func testImplicitMultiplyWithFunction() throws {
+        let node = try parser.parse("2sin(x)")
+        XCTAssertEqual(node.type, .side)
+        // Should parse as 2 * sin(x), resulting in a term node
+        let item = node.children[0]
+        XCTAssertEqual(item.children.count, 2)  // 2 and sin(x)
+    }
+
+    func testImplicitMultiplyVariableFunction() throws {
+        let node = try parser.parse("xcos(x)")
+        XCTAssertEqual(node.type, .side)
+        let item = node.children[0]
+        XCTAssertEqual(item.children.count, 2)  // x and cos(x)
+    }
+
+    func testImplicitMultiplyParenGroups() throws {
+        let node = try parser.parse("(x+1)(x-1)")
+        XCTAssertEqual(node.type, .side)
+        let item = node.children[0]
+        XCTAssertEqual(item.children.count, 2)  // (x+1) and (x-1)
+    }
+
+    func testMultiDigitNumbers() throws {
+        let node = try parser.parse("123^45")
+        let power = node.children[0]
+        XCTAssertEqual(power.type, .power)
+        XCTAssertEqual(power.children[0].value, "123")
+        XCTAssertEqual(power.children[1].value, "45")
+    }
+
+    func testDecimalBoundsInIntegral() throws {
+        let node = try parser.parse("int_0.5^1.5 x dx")
+        let integral = node.children[0]
+        XCTAssertEqual(integral.type, .integral)
+        XCTAssertEqual(integral.children[0].value, "0.5")
+        XCTAssertEqual(integral.children[1].value, "1.5")
+    }
+
+    func testFourPartEquation() throws {
+        let node = try parser.parse("a = b = c = d")
+        XCTAssertEqual(node.type, .equation)
+        XCTAssertEqual(node.children.count, 4)
+        XCTAssertEqual(node.children[3].value, "4")
+    }
+
+    func testMismatchedParenThrows() throws {
+        XCTAssertThrowsError(try parser.parse("(x + 3"))
+    }
+
+    func testPowerLabelFourth() throws {
+        let node = try parser.parse("x^4")
+        let power = node.children[0]
+        XCTAssertEqual(power.label, "x to the fourth")
+    }
+
+    func testPowerLabelFifth() throws {
+        let node = try parser.parse("x^5")
+        let power = node.children[0]
+        XCTAssertEqual(power.label, "x to the fifth")
+    }
+
+    func testNonBreakingSpaceTolerance() throws {
+        // Non-breaking space between terms
+        let input = "x\u{00A0}+\u{00A0}3"
+        let node = try parser.parse(input)
+        XCTAssertEqual(node.type, .side)
+    }
 }
 
 class SerializerTests: XCTestCase {
@@ -347,5 +500,52 @@ class SerializerTests: XCTestCase {
         // Serialization should produce "sqrt(...)" form
         let text = MathSerializer.serialize(node.children[0])
         XCTAssertTrue(text.hasPrefix("sqrt("))
+    }
+}
+
+// MARK: - Math Extractor Tests
+
+class MathExtractorTests: XCTestCase {
+
+    func testIsProseDetectsNaturalLanguage() {
+        XCTAssertTrue(MathExtractor.isProse("The answer to the equation is x^2 + 3 = 5 and it is useful"))
+        XCTAssertTrue(MathExtractor.isProse("Given that we have a formula for calculating the area"))
+    }
+
+    func testIsProseRejectsPureMath() {
+        XCTAssertFalse(MathExtractor.isProse("x^2 + 3x = 5"))
+        XCTAssertFalse(MathExtractor.isProse("a + b = c"))
+        XCTAssertFalse(MathExtractor.isProse("2x"))
+    }
+
+    func testExtractFromSimpleSentence() {
+        let results = MathExtractor.extractMath(from: "The equation is x^2 + 3 = 5 for all values")
+        XCTAssertFalse(results.isEmpty, "Should extract at least one math expression")
+        // The extracted expression should parse successfully
+        let parser = Parser()
+        XCTAssertNotNil(try? parser.parse(results[0]))
+    }
+
+    func testExtractFromSentenceWithEquals() {
+        let results = MathExtractor.extractMath(from: "We know that a + b = c so we can substitute")
+        XCTAssertFalse(results.isEmpty)
+        let parser = Parser()
+        XCTAssertNotNil(try? parser.parse(results[0]))
+    }
+
+    func testExtractMultipleEquations() {
+        let text = "First we have x = 5. Then y = 10."
+        let results = MathExtractor.extractMath(from: text)
+        XCTAssertGreaterThanOrEqual(results.count, 1)
+    }
+
+    func testNoMathInPureProse() {
+        let results = MathExtractor.extractMath(from: "The quick brown fox jumps over the lazy dog")
+        XCTAssertTrue(results.isEmpty)
+    }
+
+    func testExtractWithParentheses() {
+        let results = MathExtractor.extractMath(from: "Consider the function f(x) = (x + 1)^2 in this context")
+        XCTAssertFalse(results.isEmpty)
     }
 }
