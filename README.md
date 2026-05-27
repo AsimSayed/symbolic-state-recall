@@ -1,62 +1,63 @@
-# SymbolicStateRecall
+# Math Recall
 
-A macOS accessibility tool that allows blind and visually impaired users to navigate, query, and insert parts of mathematical expressions using a tree-based recall system. Works alongside VoiceOver and existing text editors.
+A macOS accessibility tool that lets blind and visually impaired users navigate, query, and read parts of mathematical expressions out loud. Runs as a floating dock bar alongside VoiceOver and any text editor.
 
-## Current Status
+Internal/repo name: **SymbolicStateRecall (SSR)**. Product name: **Math Recall**.
 
-**Phase 1 (Core) — Complete**
+## Why this exists
 
-| Component | Status | Tests |
-|-----------|--------|-------|
-| MathNode model | ✅ | - |
-| Tokenizer | ✅ | 5/5 |
-| Parser | ✅ | 15/15 |
-| Navigation Engine | ✅ | 6/6 |
-| Serializer | ✅ | 4/4 |
+Reading math through a screen reader is brutal. A sighted reader can glance back at `int_0^1 x^2 dx` and instantly re-parse the bounds; a VoiceOver user gets a linear blast of speech and has to hold the whole structure in working memory. Math Recall builds a tree from the equation and lets the user drill into any piece on demand: "left side, item 2, exponent." Each step is announced through VoiceOver.
 
-**Total: 30/30 tests passing**
+The project is also a case study in designing thoughtfully with AI: deterministic parsing where determinism matters, heuristics where structure breaks down, and careful edge-case coverage for a small but specific audience.
 
-## Supported Math Structures (v1: Calculus)
+## What it does
 
-- Equations: `x^2 + 1 = 5`
-- Fractions: `(x+3)/2`
-- Powers: `x^2`, `e^(2t)`
-- Square roots: `sqrt(x+1)`
-- Nth roots: `root(3, x)`
-- Definite integrals: `int_0^1 x^2 dx`
-- Indefinite integrals: `int x^2 dx`
-- Derivatives: `d/dx(x^2+3x)`
-- Limits: `lim_x->0 sin(x)/x`
-- Functions: `sin(x)`, `ln(y^3)`, `cos(x)`, `tan(x)`, `log(x)`
+1. **Reads math from anywhere** — clipboard, focused text field (Accessibility API), or prose embedded in a paragraph (heuristic extractor, no LLM).
+2. **Parses it** into an AST of equations, fractions, powers, roots, integrals, derivatives, limits, and trig/log functions.
+3. **Speaks the structure** through VoiceOver: "Line 1: 3 items on left, 1 item on right."
+4. **Navigates by query** — `1 L 2` means "Line 1, Left side, item 2." Multi-digit input is supported for equations with 10+ items.
+5. **Inserts the selected node's text** at the cursor in any app.
+
+## Supported math (v1: Calculus)
+
+Equations, fractions, powers, square roots, nth roots, definite and indefinite integrals, derivatives, limits, and named functions (`sin`, `cos`, `tan`, `ln`, `log`, etc.).
+
+Deferred to v2: matrices, piecewise functions, systems of equations, summation/product notation, logical quantifiers.
+
+## Status
+
+| Phase | What | State |
+|-------|------|-------|
+| 1 | Core parser, navigation engine, serializer (30 unit tests) | Complete |
+| 2 | Global hotkey, clipboard monitoring, focused text reading, prose extraction, floating dock bar, CGEvent tap, accessibility permissions | Complete |
+| 3 | Cursor-aware reading, recall history, multi-digit input, tolerant multi-line parsing, UI polish | In progress (`feature/ui-floating-panel`) |
+
+Phase 2 and 3 work lives on the `feature/ui-floating-panel` branch and has not been merged to main yet.
 
 ## Building
 
-### Requirements
-- macOS 15.2+
-- Xcode 16.2+
+**Requirements:** macOS 15.2+, Xcode 16.2+
 
-### Build the App
 ```bash
+# Build
 xcodebuild build -scheme symbolicStateRecall -destination 'platform=macOS'
-```
 
-### Run Tests
-```bash
+# Run unit tests (must use explicit test class specifiers — the full suite hangs on UI tests)
 xcodebuild test -scheme symbolicStateRecall -destination 'platform=macOS' \
   -only-testing:symbolicStateRecallTests/TokenizerTests \
   -only-testing:symbolicStateRecallTests/ParserTests \
   -only-testing:symbolicStateRecallTests/NavigationTests \
   -only-testing:symbolicStateRecallTests/SerializerTests
+
+# Launch the built app
+open $(find ~/Library/Developer/Xcode/DerivedData/symbolicStateRecall-*/Build/Products/Debug/symbolicStateRecall.app | head -1)
 ```
 
-> **Note**: Run with explicit test class specifiers to avoid UI test hangs.
+## CLI test harness
 
-## CLI Test Harness
-
-For interactive testing without the full app:
+For interactive testing without launching the full app:
 
 ```bash
-# Compile the CLI
 swiftc -o cli_harness \
   symbolicStateRecall/Core/Parser/Token.swift \
   symbolicStateRecall/Core/Parser/Tokenizer.swift \
@@ -68,136 +69,91 @@ swiftc -o cli_harness \
   CLITestHarness.swift \
   main.swift
 
-# Run it
 ./cli_harness
 ```
-
-### CLI Commands
 
 | Command | Action |
 |---------|--------|
 | `parse <equation>` | Parse an equation and show the AST |
 | `recall` | Enter recall mode (simulates Option+Space) |
-| `1`, `2`, etc. | Input index token |
+| `1`, `2`, ... | Input index token |
 | `L` / `R` | Select left/right side |
 | `space` | Insert selected node |
 | `back` | Go back one level |
-| `exit` | Exit recall mode |
 | `tree` | Show current AST |
-| `index` | Show top-level index |
 | `state` | Show current engine state |
-| `quit` | Exit program |
+| `quit` | Exit |
 
-### Example Session
+### Example session
 
 ```
 > parse x^2 + 3x + 5 = 20
-✅ Parsed successfully!
+Parsed successfully
 
 > recall
-🔊 "Recall mode. Line 1: 3 items on left, 1 item on right"
+VoiceOver: "Recall mode. Line 1: 3 items on left, 1 item on right"
 
 > 1
-🔊 "Line 1"
+VoiceOver: "Line 1"
 
 > L
-🔊 "Left side, 3 items"
+VoiceOver: "Left side, 3 items"
 
 > 1
-🔊 "x squared" (power node selected)
+VoiceOver: "x squared" (power node selected)
 
 > 2
-🔊 "exponent: 2"
+VoiceOver: "exponent: 2"
 
 > space
-📋 Inserted text: "2"
+Inserted text: "2"
 ```
 
-## Project Structure
+## Architecture
+
+```
+Input Layer  ──▶  Parser  ──▶  Navigation Engine  ──▶  Speech Controller
+(clipboard,      (tokenizer    (recall mode,           (VoiceOver
+ focused          + parser,     query resolution,       announcements)
+ text, prose)     MathExtractor)context stack)
+                                     │
+                                     ▼
+                               Serializer
+                               (node → text)
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design spec.
+
+## Repo layout
 
 ```
 symbolic-state-recall/
+├── ARCHITECTURE.md
+├── CLAUDE.md                          # Project instructions
+├── CLITestHarness.swift               # Standalone CLI (not in app target)
+├── main.swift                         # CLI entry
+├── symbolicStateRecall.xcodeproj/
 ├── symbolicStateRecall/
+│   ├── symbolicStateRecallApp.swift   # @main
+│   ├── AppCoordinator.swift           # Wires engine, speech, hotkey, clipboard, UI
+│   ├── ContentView.swift              # Floating dock bar
 │   ├── Core/
-│   │   ├── Input/
-│   │   │   ├── ClipboardMonitor.swift   # Clipboard monitoring + text insertion
-│   │   │   └── HotkeyManager.swift      # Global Option+Space hotkey (Carbon)
-│   │   ├── Navigation/
-│   │   │   └── NavigationEngine.swift   # Recall mode controller + query resolution
-│   │   ├── Parser/
-│   │   │   ├── MathNode.swift           # AST node model
-│   │   │   ├── Parser.swift             # Tokens → AST
-│   │   │   ├── Token.swift              # Token types
-│   │   │   └── Tokenizer.swift          # Plain text → tokens
-│   │   └── Speech/
-│   │       └── SpeechController.swift   # VoiceOver announcements
-│   ├── Utilities/
-│   │   └── MathSerializer.swift         # Node → insertable text
-│   ├── ContentView.swift
-│   └── symbolicStateRecallApp.swift
-├── symbolicStateRecallTests/
-│   └── symbolicStateRecallTests.swift   # All unit tests
-├── CLITestHarness.swift                 # Interactive CLI for testing
-├── main.swift                           # CLI entry point
-└── ARCHITECTURE.md                      # Detailed design document
+│   │   ├── Input/                     # ClipboardMonitor, FocusedTextReader, HotkeyManager
+│   │   ├── Navigation/                # NavigationEngine
+│   │   ├── Parser/                    # Token, Tokenizer, Parser, MathNode, MathExtractor
+│   │   └── Speech/                    # SpeechController
+│   ├── UI/FloatingPanel.swift         # Borderless NSPanel subclass
+│   └── Utilities/                     # MathSerializer, AccessibilityPermission
+├── symbolicStateRecallTests/          # Unit tests
+└── website/                           # Landing page iterations (Math Recall branding)
 ```
 
-## How It Works
+## Design notes
 
-1. **Parse**: User copies a math equation, the parser tokenizes it and builds an AST
-2. **Recall**: User presses Option+Space to enter recall mode
-3. **Query**: User types a path like `1 L 2` (Line 1, Left side, item 2)
-4. **Navigate**: Each token provides spoken feedback; expandable nodes can be drilled into
-5. **Insert**: Space inserts the selected node's text at cursor; Escape exits recall mode
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the complete design specification.
-
----
-
-## Next Steps (TODO)
-
-### Phase 2: macOS Integration (In Progress)
-
-- [ ] **Integrate Core with SwiftUI ContentView**
-  - Connect NavigationEngine to UI
-  - Display current equation and selection state
-  - Handle keyboard input in the app
-
-- [ ] **Test VoiceOver integration**
-  - Verify SpeechController announcements work with VoiceOver
-  - Test with screen reader enabled
-  - Ensure proper accessibility labels
-
-- [ ] **Add accessibility permissions handling**
-  - Request Accessibility API permissions on first launch
-  - Handle permission denied gracefully
-  - Guide user through System Preferences if needed
-
-- [ ] **Wire up HotkeyManager**
-  - Register Option+Space globally when app launches
-  - Handle hotkey conflicts with other apps
-
-- [ ] **Wire up ClipboardMonitor**
-  - Monitor clipboard for math text changes
-  - Auto-parse when new math content detected
-
-### Phase 3: Polish
-
-- [ ] Comprehensive error handling (see ARCHITECTURE.md error table)
-- [ ] Stale reference detection after edits
-- [ ] Timeout handling for unresponsive states
-- [ ] VoiceOver conflict mitigation
-- [ ] Menu bar app mode (optional)
-
-### Future (v2)
-
-- Matrices and systems of equations
-- Piecewise functions
-- Summation/product notation
-- Logical quantifiers
-- Direct Accessibility API integration (read from any app)
-
----
+- **No external dependencies.** Pure Apple frameworks: SwiftUI, AppKit, Carbon (global hotkey), CGEvent taps (cross-app key interception), AXUIElement (screen reader / focused text), NSPasteboard.
+- **VoiceOver speech uses `NSAccessibility` posting**, not `NSSpeechSynthesizer` or `AVSpeechSynthesizer`. This is the only way to interleave cleanly with VoiceOver's own speech queue.
+- **Accessibility permission is required** for the global hotkey, CGEvent tap, and focused text reading. The app degrades gracefully without it.
+- **`MathNode` is a class** with weak parent references, not a struct. The recall context relies on identity and back-pointers.
 
 ## License
 
