@@ -33,6 +33,45 @@ The project is also a case study in designing thoughtfully with AI: deterministi
 
 Deferred to v2: matrices, piecewise functions, systems of equations, summation/product notation, logical quantifiers.
 
+## Install
+
+**Requirements:** macOS 15.2 (Sequoia) or later. Universal build (Apple Silicon + Intel).
+
+### Homebrew (recommended)
+
+```bash
+brew install --cask asimsayed/tap/symbolic-state-recall
+```
+
+Launch it from Spotlight or `/Applications`. Homebrew clears the download
+quarantine for you, so it opens without a Gatekeeper prompt. Update later with
+`brew upgrade --cask symbolic-state-recall`.
+
+### Direct download
+
+Grab the latest `.dmg` from [Releases](https://github.com/AsimSayed/symbolic-state-recall/releases),
+open it, and drag the app to Applications. The build is signed ad-hoc (not with a
+paid Apple Developer ID), so on first launch macOS will warn it is from an
+unidentified developer. **Right-click the app → Open → Open** once to clear it.
+
+## Releasing
+
+Maintainer notes. Cut a new version with one command (uses your `gh` auth, no CI
+secrets needed):
+
+```bash
+scripts/release.sh 1.0.1
+```
+
+This builds a universal, ad-hoc-signed DMG, publishes a GitHub Release, and bumps
+the Homebrew cask in [AsimSayed/homebrew-tap](https://github.com/AsimSayed/homebrew-tap).
+
+Alternatively, pushing a `v*` tag triggers `.github/workflows/release.yml`, which
+does the same in CI. The cask-bump step there needs a repo secret
+`HOMEBREW_TAP_TOKEN` (a fine-grained PAT with Contents read/write on the tap repo);
+without it, the Release is still published and you can bump the cask via
+`scripts/release.sh`.
+
 ## Building
 
 **Requirements:** macOS 15.2+, Xcode 16.2+

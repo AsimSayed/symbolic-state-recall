@@ -12,6 +12,7 @@ DerivedData/
 
 # Build artifacts
 build/
+dist/
 *.o
 *.swp
 
