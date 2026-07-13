@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Recall — Equations shouldn't be a wall of sound.</title>
+<meta name="description" content="Math Recall is a free macOS accessibility tool that lets blind and low-vision students navigate mathematical expressions by structure — not as a stream of speech. From the University of Washington.">
+<meta property="og:title" content="Math Recall — Accessibility for math on macOS">
+<meta property="og:description" content="Screen readers flatten equations into a single sentence. Math Recall gives them back their structure — so every part is reachable, speakable, and usable.">
+<style>
+/* ════════════════════════════════════════════════════════════════
+   v5 — APPLE PRODUCT PAGE
+   Tokens, type, rhythm modeled on apple.com product pages (2025).
+   Fresh copy. Tree-first visual story.
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Surfaces */
+  --bg-default: #ffffff;
+  --bg-soft:    #fbfbfd;
+  --bg-alt:     #f5f5f7;
+  --bg-deep:    #1d1d1f;
+
+  /* Ink */
+  --ink-1: #1d1d1f;        /* primary */
+  --ink-2: #424245;        /* secondary headings */
+  --ink-3: #6e6e73;        /* body secondary */
+  --ink-4: #86868b;        /* tertiary */
+
+  /* Hairlines */
+  --hair: #d2d2d7;
+  --hair-soft: #e8e8ed;
+
+  /* Accents */
+  --link: #0066cc;
+  --link-hover: #0077ed;
+  --green: #29a745;
+  --speech: #bf5af2;       /* VoiceOver purple */
+  --signal: #64d2ff;       /* tree highlight */
+
+  /* Type stack — SF Pro */
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-text:    -apple-system, BlinkMacSystemFont, "SF Pro Text",    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono:    "SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+
+  /* Rhythm */
+  --section-y: 130px;
+  --content-w: 980px;
+  --content-w-wide: 1200px;
+  --content-w-narrow: 720px;
+
+  /* Easing — apple's slow grace */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Reset ─────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+  font-family: var(--font-text);
+  font-size: 17px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+body {
+  background: var(--bg-default);
+  color: var(--ink-1);
+  line-height: 1.47059;
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+img, svg { display: block; max-width: 100%; }
+button { font: inherit; cursor: pointer; }
+::selection { background: var(--link); color: #fff; }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* A11y skip link */
+.skip {
+  position: absolute;
+  top: -200px; left: 16px;
+  padding: 12px 22px;
+  background: var(--link); color: #fff;
+  border-radius: 980px;
+  font-size: 14px; font-weight: 500;
+  z-index: 200;
+}
+.skip:focus { top: 16px; }
+
+/* Sticky nav ─────────────────── */
+.nav {
+  position: fixed; inset: 0 0 auto 0;
+  height: 52px;
+  background: rgba(251, 251, 253, 0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--hair-soft);
+  z-index: 100;
+}
+.nav-inner {
+  max-width: 1024px;
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-brand {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  color: var(--ink-1);
+}
+.nav-brand:hover { text-decoration: none; }
+.nav-links {
+  display: flex; align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 12px;
+  color: var(--ink-2);
+  letter-spacing: -0.01em;
+  font-weight: 400;
+  transition: color 0.2s var(--ease-out);
+}
+.nav-links a:hover { color: var(--ink-1); text-decoration: none; }
+.nav-cta {
+  font-size: 12px;
+  color: var(--link);
+}
+.nav-cta:hover { text-decoration: underline; }
+
+/* Buttons (Apple pill style) ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 24px;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  border-radius: 980px;
+  border: none;
+  text-decoration: none;
+  transition: background 0.25s var(--ease-out), transform 0.18s var(--ease-out);
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--link);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--link-hover); text-decoration: none; }
+.btn-primary:active { transform: scale(0.97); }
+.btn-ghost {
+  padding: 12px 0;
+  background: transparent;
+  color: var(--link);
+}
+.btn-ghost:hover { text-decoration: underline; }
+.btn-ghost .arrow {
+  display: inline-block;
+  transition: transform 0.25s var(--ease-out);
+}
+.btn-ghost:hover .arrow { transform: translateX(3px); }
+
+/* Layout helpers ───────────────── */
+main { padding-top: 52px; }
+.section { padding: var(--section-y) 0; position: relative; }
+.section-soft { background: var(--bg-soft); }
+.section-alt { background: var(--bg-alt); }
+.section-deep { background: var(--bg-deep); color: #f5f5f7; }
+.wrap { max-width: var(--content-w); margin: 0 auto; padding: 0 22px; }
+.wrap-wide { max-width: var(--content-w-wide); margin: 0 auto; padding: 0 22px; }
+.wrap-narrow { max-width: var(--content-w-narrow); margin: 0 auto; padding: 0 22px; }
+
+/* Display type ─────────────────── */
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--link);
+  margin-bottom: 8px;
+}
+.display-1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 112px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: var(--ink-1);
+  text-wrap: balance;
+}
+.display-2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(40px, 5.6vw, 72px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--ink-1);
+  text-wrap: balance;
+}
+.display-3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.028em;
+  color: var(--ink-1);
+  text-wrap: balance;
+}
+.lede {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(21px, 2.2vw, 28px);
+  line-height: 1.357;
+  letter-spacing: -0.012em;
+  color: var(--ink-3);
+  text-wrap: pretty;
+}
+.body {
+  font-size: 17px;
+  line-height: 1.529;
+  color: var(--ink-3);
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+}
+.small {
+  font-size: 13px;
+  color: var(--ink-4);
+  letter-spacing: -0.005em;
+}
+.section-deep .display-1,
+.section-deep .display-2,
+.section-deep .display-3 { color: #f5f5f7; }
+.section-deep .lede,
+.section-deep .body { color: rgba(245, 245, 247, 0.7); }
+.section-deep .eyebrow { color: var(--signal); }
+
+/* HERO ─────────────────────────── */
+.hero {
+  padding: 96px 0 48px;
+  background: var(--bg-soft);
+  text-align: center;
+}
+.hero .eyebrow { margin-bottom: 12px; }
+.hero h1 { margin-bottom: 20px; }
+.hero .lede {
+  max-width: 680px;
+  margin: 0 auto 36px;
+}
+.hero-actions {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.hero-meta {
+  font-size: 13px;
+  color: var(--ink-4);
+  letter-spacing: -0.005em;
+  margin-top: 16px;
+}
+.hero-meta strong { color: var(--ink-2); font-weight: 500; }
+
+/* Hero stage — the equation tree */
+.hero-stage {
+  margin: 80px auto 0;
+  max-width: 920px;
+  position: relative;
+}
+.tree-card {
+  background: var(--bg-deep);
+  border-radius: 22px;
+  padding: 56px 40px 48px;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 12px 32px rgba(0,0,0,0.08),
+    0 32px 80px rgba(0,0,0,0.12);
+}
+.tree-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(100, 210, 255, 0.12), transparent 60%),
+    radial-gradient(circle at 80% 100%, rgba(191, 90, 242, 0.08), transparent 60%);
+  pointer-events: none;
+}
+.tree-card-label {
+  position: absolute;
+  top: 22px; left: 28px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+.tree-equation {
+  font-family: var(--font-mono);
+  font-size: clamp(20px, 2.6vw, 28px);
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  margin-bottom: 36px;
+  letter-spacing: 0.02em;
+}
+.tree-equation .selected {
+  color: var(--signal);
+  background: rgba(100, 210, 255, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  outline: 1px solid rgba(100, 210, 255, 0.3);
+}
+
+/* SVG tree visual */
+.tree-svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 720px;
+  width: 100%;
+  height: auto;
+}
+.tree-svg .branch { stroke: rgba(255, 255, 255, 0.18); stroke-width: 1.5; fill: none; }
+.tree-svg .branch.active { stroke: var(--signal); stroke-width: 2; }
+.tree-svg .node-bg { fill: rgba(255, 255, 255, 0.04); stroke: rgba(255, 255, 255, 0.16); stroke-width: 1; }
+.tree-svg .node-bg.active { fill: rgba(100, 210, 255, 0.14); stroke: var(--signal); stroke-width: 1.5; }
+.tree-svg .node-label { font-family: var(--font-mono); font-size: 13px; fill: rgba(255, 255, 255, 0.7); }
+.tree-svg .node-label.active { fill: var(--signal); font-weight: 600; }
+.tree-svg .node-tag { font-family: var(--font-text); font-size: 10px; fill: rgba(255, 255, 255, 0.4); }
+.tree-svg .node-tag.active { fill: rgba(100, 210, 255, 0.7); }
+
+/* Speech bubble */
+.speech-bubble {
+  margin: 28px auto 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(191, 90, 242, 0.12);
+  border: 1px solid rgba(191, 90, 242, 0.3);
+  border-radius: 980px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--speech);
+  letter-spacing: 0.01em;
+}
+.speech-bubble::before {
+  content: "";
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--speech);
+  box-shadow: 0 0 12px rgba(191, 90, 242, 0.6);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.tree-card-center { text-align: center; position: relative; }
+
+/* Highlights strip ─────────────── */
+.strip {
+  background: var(--bg-default);
+  padding: 48px 0;
+  border-bottom: 1px solid var(--hair-soft);
+}
+.strip-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  text-align: center;
+}
+.strip-cell {
+  padding: 0 24px;
+  border-right: 1px solid var(--hair-soft);
+}
+.strip-cell:last-child { border-right: none; }
+.strip-cell .icon {
+  width: 32px; height: 32px;
+  margin: 0 auto 12px;
+  color: var(--link);
+}
+.strip-cell h4 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  color: var(--ink-1);
+  margin-bottom: 4px;
+}
+.strip-cell p {
+  font-size: 12px;
+  color: var(--ink-4);
+  letter-spacing: -0.005em;
+}
+
+/* Section header ──────────────── */
+.section-head {
+  text-align: center;
+  margin-bottom: 64px;
+}
+.section-head .eyebrow { display: block; margin-bottom: 8px; }
+.section-head .display-2 { margin-bottom: 16px; }
+.section-head .lede { max-width: 620px; margin: 0 auto; }
+
+/* HOW IT WORKS — three step cards */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.step {
+  background: var(--bg-default);
+  border-radius: 20px;
+  padding: 40px 36px 36px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 420px;
+  border: 1px solid var(--hair-soft);
+}
+.step-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--ink-4);
+  margin-bottom: 24px;
+}
+.step h3 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin-bottom: 12px;
+  color: var(--ink-1);
+}
+.step p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-3);
+  margin-bottom: auto;
+  padding-bottom: 28px;
+}
+.step-keys {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-1);
+  background: #fff;
+  border: 1px solid var(--hair);
+  border-bottom-width: 2px;
+  border-radius: 7px;
+}
+.kbd-sep {
+  color: var(--ink-4);
+  font-size: 14px;
+  margin: 0 2px;
+}
+
+/* TREES NOT STRINGS — the big idea */
+.bigidea {
+  background: var(--bg-deep);
+  color: #f5f5f7;
+  padding: var(--section-y) 0;
+  position: relative;
+  overflow: hidden;
+}
+.bigidea::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 1200px 600px at 50% 0%, rgba(100, 210, 255, 0.06), transparent 70%);
+  pointer-events: none;
+}
+.bigidea-content { position: relative; }
+.bigidea .section-head .display-2 { color: #f5f5f7; }
+.bigidea .section-head .lede { color: rgba(245, 245, 247, 0.6); }
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+.compare-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 36px 32px;
+  position: relative;
+}
+.compare-card.win {
+  border-color: rgba(100, 210, 255, 0.35);
+  background: rgba(100, 210, 255, 0.04);
+}
+.compare-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 5px 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 20px;
+}
+.compare-card.win .compare-tag {
+  background: rgba(100, 210, 255, 0.14);
+  color: var(--signal);
+}
+.compare h4 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: #f5f5f7;
+  margin-bottom: 12px;
+}
+.compare p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(245, 245, 247, 0.55);
+  margin-bottom: 24px;
+}
+.compare-visual {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 24px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.5);
+  min-height: 180px;
+}
+.linear-blob {
+  color: var(--speech);
+  opacity: 0.85;
+  font-style: italic;
+}
+.linear-marquee {
+  margin-top: 16px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, rgba(191, 90, 242, 0.5), transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: scan 3s linear infinite;
+}
+@keyframes scan {
+  0% { background-position: -50% 0; }
+  100% { background-position: 150% 0; }
+}
+.tree-mini {
+  display: flex; flex-direction: column; gap: 4px;
+  font-family: var(--font-mono); font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+}
+.tree-mini .row { display: flex; align-items: baseline; }
+.tree-mini .indent { color: rgba(255, 255, 255, 0.2); padding-right: 8px; white-space: pre; }
+.tree-mini .leaf { color: var(--signal); }
+.tree-mini .tag { color: rgba(255, 255, 255, 0.35); font-size: 11px; margin-left: 8px; }
+
+/* DETERMINISTIC ─────────────── */
+.deterministic {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+.deterministic h2 { margin-bottom: 20px; }
+.deterministic .body { font-size: 18px; line-height: 1.55; margin-bottom: 16px; }
+.deterministic .body strong { color: var(--ink-1); font-weight: 500; }
+.det-checks {
+  list-style: none;
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.det-checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 15px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.det-checks .check {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.det-checks .check svg { width: 12px; height: 12px; }
+
+.det-diagram {
+  background: var(--bg-deep);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 8px 24px rgba(0,0,0,0.08),
+    0 24px 64px rgba(0,0,0,0.12);
+}
+.det-diagram-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 18px;
+}
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pipeline-step {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pipeline-step .name { color: rgba(255, 255, 255, 0.9); }
+.pipeline-step .meta { color: rgba(255, 255, 255, 0.4); font-size: 11px; }
+.pipeline-arrow {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 14px;
+  line-height: 1;
+}
+.pipeline-step.signal {
+  background: rgba(100, 210, 255, 0.08);
+  border-color: rgba(100, 210, 255, 0.3);
+}
+.pipeline-step.signal .name { color: var(--signal); }
+
+/* RESEARCH STORY ─────────────── */
+.research {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.research-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.research-photos figure {
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-alt);
+  aspect-ratio: 3 / 4;
+}
+.research-photos figure:first-child { aspect-ratio: 4 / 5; transform: translateY(-16px); }
+.research-photos img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.research-text h2 { margin-bottom: 20px; }
+.research-text p { font-size: 17px; line-height: 1.55; color: var(--ink-3); margin-bottom: 14px; }
+.research-text p strong { color: var(--ink-1); font-weight: 500; }
+.research-badges {
+  display: flex; align-items: center; gap: 18px;
+  margin-top: 28px;
+  padding-top: 28px;
+  border-top: 1px solid var(--hair-soft);
+}
+.research-badges img {
+  height: 56px; width: auto;
+  opacity: 0.85;
+}
+.research-badges .badge-text {
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+.research-badges .badge-text strong { color: var(--ink-1); font-weight: 500; display: block; }
+
+/* SPECS ─────────────────────── */
+.specs-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 80px;
+  align-items: start;
+}
+.specs-layout h2 { margin-bottom: 16px; }
+.specs-layout .lede { text-align: left; max-width: none; margin-bottom: 0; }
+.specs-table { display: flex; flex-direction: column; }
+.spec-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--hair-soft);
+  align-items: baseline;
+}
+.spec-row:first-child { border-top: 1px solid var(--hair-soft); }
+.spec-key {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-1);
+  letter-spacing: -0.005em;
+}
+.spec-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-3);
+  letter-spacing: -0.002em;
+}
+
+/* CTA ─────────────────────────── */
+.cta { padding: 130px 0; background: var(--bg-soft); text-align: center; }
+.cta .display-2 { margin-bottom: 16px; }
+.cta .lede { max-width: 580px; margin: 0 auto 36px; }
+.cta-row {
+  display: flex; gap: 28px; justify-content: center;
+  align-items: center; flex-wrap: wrap;
+}
+.cta-meta {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--ink-4);
+}
+
+/* FOOTER ─────────────────────── */
+footer {
+  background: var(--bg-alt);
+  padding: 32px 0 28px;
+  border-top: 1px solid var(--hair-soft);
+}
+.footer-inner {
+  max-width: var(--content-w);
+  margin: 0 auto;
+  padding: 0 22px;
+}
+.footer-cols {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--hair);
+}
+.footer-cols h5 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1);
+  margin-bottom: 12px;
+}
+.footer-cols ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.footer-cols a {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: -0.005em;
+}
+.footer-cols a:hover { color: var(--ink-1); text-decoration: underline; }
+.footer-tag {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  max-width: 320px;
+}
+.footer-tag strong { color: var(--ink-1); font-weight: 500; }
+.footer-legal {
+  display: flex; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+  padding-top: 18px;
+  font-size: 12px;
+  color: var(--ink-4);
+}
+.footer-legal a { color: var(--ink-3); }
+
+/* Fade-in choreography ──────── */
+.fade {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+}
+.fade.in { opacity: 1; transform: none; }
+.fade.d1 { transition-delay: 0.08s; }
+.fade.d2 { transition-delay: 0.16s; }
+.fade.d3 { transition-delay: 0.24s; }
+.fade.d4 { transition-delay: 0.32s; }
+
+/* Responsive ─────────────────── */
+@media (max-width: 960px) {
+  :root { --section-y: 90px; }
+  .nav-links { display: none; }
+  .strip-row { grid-template-columns: 1fr 1fr; gap: 32px 0; }
+  .strip-cell:nth-child(2) { border-right: none; }
+  .strip-cell { border-bottom: 1px solid var(--hair-soft); padding-bottom: 32px; }
+  .strip-cell:nth-last-child(-n+2) { border-bottom: none; padding-bottom: 0; padding-top: 32px; }
+  .steps { grid-template-columns: 1fr; }
+  .step { min-height: 0; }
+  .compare { grid-template-columns: 1fr; }
+  .deterministic { grid-template-columns: 1fr; gap: 48px; }
+  .research { grid-template-columns: 1fr; gap: 48px; }
+  .research-photos figure:first-child { transform: none; }
+  .specs-layout { grid-template-columns: 1fr; gap: 40px; }
+  .footer-cols { grid-template-columns: 1fr 1fr; }
+  .footer-tag { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  :root { --section-y: 72px; }
+  .hero { padding: 80px 0 32px; }
+  .hero-stage { margin-top: 56px; }
+  .tree-card { padding: 44px 22px 36px; }
+  .spec-row { grid-template-columns: 1fr; gap: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .fade { opacity: 1; transform: none; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip">Skip to main content</a>
+
+<nav class="nav" aria-label="Primary">
+  <div class="nav-inner">
+    <a href="#main" class="nav-brand">Math Recall</a>
+    <ul class="nav-links">
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#tree">Why it matters</a></li>
+      <li><a href="#deterministic">Reliability</a></li>
+      <li><a href="#research">Research</a></li>
+    </ul>
+    <a href="#download" class="nav-cta">Download &rsaquo;</a>
+  </div>
+</nav>
+
+<main id="main">
+
+  <!-- ═══════════════════ HERO ═══════════════════ -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow fade">Accessibility</p>
+      <h1 class="display-1 fade d1">Equations shouldn&rsquo;t be a wall of sound.</h1>
+      <p class="lede fade d2">For blind and low-vision students, screen readers turn math into a single unbreakable sentence. Math Recall gives it back its structure &mdash; so every part of every equation is reachable, speakable, and ready to use.</p>
+      <div class="hero-actions fade d3">
+        <a href="#download" class="btn btn-primary">Download for macOS</a>
+        <a href="#how" class="btn btn-ghost">How a student uses it <span class="arrow" aria-hidden="true">&rsaquo;</span></a>
+      </div>
+      <p class="hero-meta fade d4"><strong>Free and open source</strong> &middot; macOS 15.2+ &middot; VoiceOver-native &middot; MIT License</p>
+
+      <!-- Hero stage: structural tree visualization -->
+      <div class="hero-stage fade d4">
+        <div class="tree-card">
+          <span class="tree-card-label">Recall mode</span>
+          <p class="tree-equation">x<sup>2</sup> + 3x + 5 = 20</p>
+
+          <svg class="tree-svg" viewBox="0 0 720 280" aria-label="Equation parsed as a tree, with the x squared node selected.">
+            <!-- Branches -->
+            <path class="branch" d="M 360 50 L 200 130" />
+            <path class="branch" d="M 360 50 L 520 130" />
+            <path class="branch active" d="M 200 130 L 110 220" />
+            <path class="branch" d="M 200 130 L 200 220" />
+            <path class="branch" d="M 200 130 L 290 220" />
+            <path class="branch" d="M 520 130 L 520 220" />
+
+            <!-- Root: equation -->
+            <rect class="node-bg" x="290" y="22" width="140" height="56" rx="10" />
+            <text class="node-label" x="360" y="48" text-anchor="middle">equation</text>
+            <text class="node-tag" x="360" y="64" text-anchor="middle">Line 1</text>
+
+            <!-- Left side -->
+            <rect class="node-bg" x="130" y="102" width="140" height="56" rx="10" />
+            <text class="node-label" x="200" y="128" text-anchor="middle">left side</text>
+            <text class="node-tag" x="200" y="144" text-anchor="middle">3 items</text>
+
+            <!-- Right side -->
+            <rect class="node-bg" x="450" y="102" width="140" height="56" rx="10" />
+            <text class="node-label" x="520" y="128" text-anchor="middle">right side</text>
+            <text class="node-tag" x="520" y="144" text-anchor="middle">1 item</text>
+
+            <!-- Children of left -->
+            <rect class="node-bg active" x="50" y="192" width="120" height="56" rx="10" />
+            <text class="node-label active" x="110" y="218" text-anchor="middle">x²</text>
+            <text class="node-tag active" x="110" y="234" text-anchor="middle">power node</text>
+
+            <rect class="node-bg" x="140" y="192" width="120" height="56" rx="10" />
+            <text class="node-label" x="200" y="218" text-anchor="middle">3x</text>
+            <text class="node-tag" x="200" y="234" text-anchor="middle">term</text>
+
+            <rect class="node-bg" x="230" y="192" width="120" height="56" rx="10" />
+            <text class="node-label" x="290" y="218" text-anchor="middle">5</text>
+            <text class="node-tag" x="290" y="234" text-anchor="middle">constant</text>
+
+            <!-- Right child -->
+            <rect class="node-bg" x="460" y="192" width="120" height="56" rx="10" />
+            <text class="node-label" x="520" y="218" text-anchor="middle">20</text>
+            <text class="node-tag" x="520" y="234" text-anchor="middle">constant</text>
+          </svg>
+
+          <div class="tree-card-center">
+            <div class="speech-bubble" aria-live="polite">VoiceOver: &ldquo;x squared, power node&rdquo;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ HIGHLIGHTS STRIP ═══════════════════ -->
+  <section class="strip" aria-label="At a glance">
+    <div class="wrap-wide">
+      <div class="strip-row">
+        <div class="strip-cell">
+          <svg class="icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="16" cy="6" r="3"/><circle cx="6" cy="22" r="3"/><circle cx="16" cy="22" r="3"/><circle cx="26" cy="22" r="3"/><path d="M16 9 L6 19 M16 9 L16 19 M16 9 L26 19"/></svg>
+          <h4>Tree, not string</h4>
+          <p>Walk every node by structure</p>
+        </div>
+        <div class="strip-cell">
+          <svg class="icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="24" height="14" rx="3"/><path d="M9 16h.01M14 16h.01M19 16h.01M9 20h14"/></svg>
+          <h4>Three keystrokes</h4>
+          <p>Number, side, number &mdash; done</p>
+        </div>
+        <div class="strip-cell">
+          <svg class="icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 12v8h4l6 5V7l-6 5H6z"/><path d="M22 11a6 6 0 0 1 0 10"/><path d="M25 8a10 10 0 0 1 0 16"/></svg>
+          <h4>VoiceOver-native</h4>
+          <p>Built for the screen reader</p>
+        </div>
+        <div class="strip-cell">
+          <svg class="icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="14" width="18" height="13" rx="2"/><path d="M11 14V9a5 5 0 0 1 10 0v5"/></svg>
+          <h4>Fully deterministic</h4>
+          <p>No language model at runtime</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ HOW IT WORKS ═══════════════════ -->
+  <section class="section" id="how">
+    <div class="wrap-wide">
+      <div class="section-head">
+        <span class="eyebrow fade">How a student uses it</span>
+        <h2 class="display-2 fade d1">Three keystrokes from equation to cursor.</h2>
+        <p class="lede fade d2">A student working through a problem set encounters an equation. They need one piece of it. Here&rsquo;s what that looks like.</p>
+      </div>
+
+      <div class="steps">
+        <article class="step fade d1">
+          <div class="step-num">01 &mdash; Capture</div>
+          <h3>Start from wherever you are.</h3>
+          <p>The student presses Option+Space. Math Recall reads the equation from the app they&rsquo;re in &mdash; a PDF, a text editor, a webpage &mdash; and builds a structure they can explore.</p>
+          <div class="step-keys">
+            <span class="kbd">⌥</span><span class="kbd-sep">+</span><span class="kbd">Space</span>
+          </div>
+        </article>
+
+        <article class="step fade d2">
+          <div class="step-num">02 &mdash; Navigate</div>
+          <h3>Walk in by ear.</h3>
+          <p>VoiceOver announces each level. <em>&ldquo;Left side, three items.&rdquo;</em> <em>&ldquo;x squared, power node.&rdquo;</em> The student always knows where they are &mdash; and can back out or go deeper at any point.</p>
+          <div class="step-keys">
+            <span class="kbd">1</span><span class="kbd-sep">›</span><span class="kbd">L</span><span class="kbd-sep">›</span><span class="kbd">2</span>
+          </div>
+        </article>
+
+        <article class="step fade d3">
+          <div class="step-num">03 &mdash; Extract</div>
+          <h3>Drop it into your work.</h3>
+          <p>Press Space. The selected piece appears at the cursor in whatever app they were writing in. They never left their editor. The whole thing took under two seconds.</p>
+          <div class="step-keys">
+            <span class="kbd">Space</span>
+            <span class="kbd-sep" style="margin-left:8px">→</span>
+            <span class="small" style="margin-left:8px">x² inserted</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ THE BIG IDEA ═══════════════════ -->
+  <section class="bigidea" id="tree">
+    <div class="wrap bigidea-content">
+      <div class="section-head">
+        <span class="eyebrow fade">Why it matters</span>
+        <h2 class="display-2 fade d1">Structure you can walk.</h2>
+        <p class="lede fade d2">A sighted student glances at an equation and instantly isolates any piece. A blind student hears the whole thing, start to finish, every time. Math Recall closes that gap.</p>
+      </div>
+
+      <div class="compare">
+        <div class="compare-card fade d1">
+          <span class="compare-tag">Without Math Recall</span>
+          <h4>The equation is a sentence.</h4>
+          <p>A screen reader announces <code>∫₀¹ x² dx</code> start to finish. There&rsquo;s no way to skip ahead, go back to the exponent, or pull out a single piece to reuse.</p>
+          <div class="compare-visual">
+            <div class="linear-blob">&ldquo;integral from zero to one of x squared d x&rdquo;</div>
+            <div class="linear-marquee" aria-hidden="true"></div>
+            <p style="margin-top:18px;color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:0.04em;text-transform:uppercase;">No structure &middot; No selection</p>
+          </div>
+        </div>
+
+        <div class="compare-card win fade d2">
+          <span class="compare-tag">With Math Recall</span>
+          <h4>The equation is a structure.</h4>
+          <p>The same expression becomes a tree the student can walk. Each part is named, reachable, and spoken aloud. Step in, step out, step sideways.</p>
+          <div class="compare-visual">
+            <div class="tree-mini">
+              <div class="row"><span class="indent"></span><span>integral</span><span class="tag">node</span></div>
+              <div class="row"><span class="indent">  ├─</span><span>lower bound</span><span class="tag">0</span></div>
+              <div class="row"><span class="indent">  ├─</span><span>upper bound</span><span class="tag">1</span></div>
+              <div class="row"><span class="indent">  ├─</span><span class="leaf">x²</span><span class="tag">power node ←</span></div>
+              <div class="row"><span class="indent">  └─</span><span>differential</span><span class="tag">dx</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ DETERMINISTIC ═══════════════════ -->
+  <section class="section section-soft" id="deterministic">
+    <div class="wrap-wide">
+      <div class="deterministic">
+        <div>
+          <span class="eyebrow fade">Reliable by design</span>
+          <h2 class="display-2 fade d1">Same input, same result. Always.</h2>
+          <p class="body fade d2">A student who depends on a screen reader needs to trust that pressing the same keys gives the same result every time. <strong>Math Recall has no language model at runtime.</strong> It uses a recursive descent parser &mdash; the same technique compilers have relied on for decades.</p>
+          <p class="body fade d2">Press <code>1, L, 2</code> today and you get the same piece of the equation tomorrow. That kind of reliability isn&rsquo;t a technical preference &mdash; it&rsquo;s an accessibility requirement.</p>
+
+          <ul class="det-checks fade d3">
+            <li>
+              <span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5 L5 9 L10 3"/></svg></span>
+              <span>Same input, same output, every time. No probabilistic anything.</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5 L5 9 L10 3"/></svg></span>
+              <span>Edge cases (<code>(x+3)/2</code>, <code>d/dx</code>, <code>sin(x)</code>) resolved by fixed rules, not guesses.</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5 L5 9 L10 3"/></svg></span>
+              <span>30 unit tests covering tokenization, parsing, navigation, serialization. All green.</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5 L5 9 L10 3"/></svg></span>
+              <span>AI was used to <em>design</em> the system. The system itself is deterministic code.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="det-diagram fade d2">
+          <div class="det-diagram-title">Pipeline · plain text → cursor</div>
+          <div class="pipeline">
+            <div class="pipeline-step">
+              <span class="name">Capture</span>
+              <span class="meta">Accessibility API</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">
+              <span class="name">Tokenize</span>
+              <span class="meta">Lexer</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step signal">
+              <span class="name">Parse</span>
+              <span class="meta">Recursive descent</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">
+              <span class="name">Navigate</span>
+              <span class="meta">Tree walker · L/R · index</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">
+              <span class="name">Speak</span>
+              <span class="meta">VoiceOver / AVSpeech</span>
+            </div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">
+              <span class="name">Insert</span>
+              <span class="meta">CGEvent → focused app</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ RESEARCH STORY ═══════════════════ -->
+  <section class="section" id="research">
+    <div class="wrap">
+      <div class="research">
+        <div class="research-photos fade">
+          <figure>
+            <img src="codesign-session.jpg" alt="Codesign session: a researcher and a blind student work together at a desk with a laptop.">
+          </figure>
+          <figure>
+            <img src="testing-session.jpg" alt="Testing session: hands at a keyboard during accessibility testing.">
+          </figure>
+        </div>
+
+        <div class="research-text">
+          <span class="eyebrow fade d1">From the University of Washington</span>
+          <h2 class="display-2 fade d2">Built around the people who need it.</h2>
+          <p class="fade d2">Most software adds accessibility after the product is done. Math Recall started there. Every interaction was designed for someone who will never see the interface.</p>
+          <p class="fade d2">There is no mouse interaction. No drag-and-drop. No visual canvas. The only question behind every decision: <strong>can this person tell where they are in the equation, and get the piece they need?</strong></p>
+
+          <div class="research-badges fade d3">
+            <img src="uw-badge.png" alt="University of Washington">
+            <img src="hcde-badge.png" alt="Human Centered Design &amp; Engineering">
+            <div class="badge-text">
+              <strong>HCDE Research</strong>
+              Accessibility &middot; AI-assisted design
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ TECH SPECS ═══════════════════ -->
+  <section class="section section-alt">
+    <div class="wrap">
+      <div class="specs-layout">
+        <div>
+          <span class="eyebrow fade">What&rsquo;s inside</span>
+          <h2 class="display-3 fade d1">Native macOS, end to end.</h2>
+          <p class="lede fade d2">Swift, SwiftUI, Carbon, AVSpeech, Accessibility API. Nothing you don&rsquo;t already trust your computer with.</p>
+        </div>
+
+        <div class="specs-table fade d2">
+          <div class="spec-row"><span class="spec-key">Parser</span><span class="spec-val">Recursive descent · tokenize → AST</span></div>
+          <div class="spec-row"><span class="spec-key">Notation</span><span class="spec-val">∫ &middot; d/dx &middot; lim &middot; x^n &middot; √ &middot; fractions &middot; trig &middot; log</span></div>
+          <div class="spec-row"><span class="spec-key">Activation</span><span class="spec-val">Option + Space · global hotkey</span></div>
+          <div class="spec-row"><span class="spec-key">Speech</span><span class="spec-val">VoiceOver native · AVSpeech fallback</span></div>
+          <div class="spec-row"><span class="spec-key">Capture</span><span class="spec-val">Clipboard · Accessibility API</span></div>
+          <div class="spec-row"><span class="spec-key">Insertion</span><span class="spec-val">CGEvent → focused application</span></div>
+          <div class="spec-row"><span class="spec-key">Tests</span><span class="spec-val">30 unit tests · all passing</span></div>
+          <div class="spec-row"><span class="spec-key">Language</span><span class="spec-val">Swift · SwiftUI · Carbon Event Manager</span></div>
+          <div class="spec-row"><span class="spec-key">Requires</span><span class="spec-val">macOS 15.2+ · Apple silicon or Intel</span></div>
+          <div class="spec-row"><span class="spec-key">License</span><span class="spec-val">MIT &middot; free, forever</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ CTA ═══════════════════ -->
+  <section class="cta" id="download">
+    <div class="wrap-narrow">
+      <span class="eyebrow fade">Try Math Recall</span>
+      <h2 class="display-2 fade d1">Free and open source. As it should be.</h2>
+      <p class="lede fade d2">MIT licensed, built at the University of Washington, and designed for the students who need it most. Download it, build it, improve it.</p>
+      <div class="cta-row fade d3">
+        <a href="https://github.com/AsimSayed/symbolic-state-recall" class="btn btn-primary">Download for macOS</a>
+        <a href="https://github.com/AsimSayed/symbolic-state-recall" class="btn btn-ghost">View on GitHub <span class="arrow" aria-hidden="true">&rsaquo;</span></a>
+      </div>
+      <p class="cta-meta fade d4">macOS 15.2+ &middot; Xcode 16.2+ to build &middot; MIT License</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ FOOTER ═══════════════════ -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-cols">
+        <div>
+          <h5>Math Recall</h5>
+          <p class="footer-tag">A research project on structural accessibility for mathematical notation. <strong>Built at the University of Washington HCDE.</strong></p>
+        </div>
+        <div>
+          <h5>Project</h5>
+          <ul>
+            <li><a href="https://github.com/AsimSayed/symbolic-state-recall">Source</a></li>
+            <li><a href="https://github.com/AsimSayed/symbolic-state-recall#readme">Documentation</a></li>
+            <li><a href="../press-release.md">Press</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Research</h5>
+          <ul>
+            <li><a href="https://hcde.washington.edu/">UW HCDE</a></li>
+            <li><a href="case-study.html">Case study</a></li>
+            <li><a href="../iterations/">Iterations</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Legal</h5>
+          <ul>
+            <li><a href="https://opensource.org/licenses/MIT">MIT License</a></li>
+            <li><a href="https://github.com/AsimSayed/symbolic-state-recall/issues">Issues</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-legal">
+        <p>© 2026 Asim Sayed · UW HCDE</p>
+        <p>Math Recall is independent research. macOS and VoiceOver are trademarks of Apple Inc.</p>
+      </div>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  // Fade-in choreography on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+  document.querySelectorAll('.fade').forEach((el) => observer.observe(el));
+</script>
+
+</body>
+</html>
