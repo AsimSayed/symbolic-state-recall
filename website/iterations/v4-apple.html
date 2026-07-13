@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Recall — Navigate math by feel, not by sight</title>
+<meta name="description" content="Math Recall lets blind and visually impaired users navigate, query, and insert complex mathematical expressions using tree-based symbolic recall. Built for macOS.">
+<meta property="og:title" content="Math Recall — Navigate math by feel, not by sight">
+<meta property="og:description" content="The first tool that lets screen reader users structurally navigate math. Not linearly. Structurally.">
+<style>
+/* ════════════════════════════════════════════
+   APPLE PRODUCT PAGE — DESIGN TOKENS
+   Sourced from apple.com product detail pages
+   ════════════════════════════════════════════ */
+:root {
+  /* Apple palette */
+  --hero-bg: #fbfbfd;
+  --white: #fff;
+  --section-alt: #f5f5f7;
+  --text-primary: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary: #6e6e73;
+  --link: #0071e3;
+  --link-hover: #0077ed;
+  --cta-bg: #0071e3;
+  --cta-hover: #0077ed;
+  --separator: #d2d2d7;
+  --separator-light: #e8e8ed;
+  --green: #34c759;
+  --badge-bg: rgba(0,0,0,.04);
+
+  /* Type — SF Pro stack */
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', SFMono-Regular, ui-monospace, 'Menlo', monospace;
+
+  /* Spacing */
+  --section-padding: 120px;
+  --content-width: 980px;
+  --content-width-narrow: 740px;
+}
+
+/* ════════════════════════════════════════════
+   RESET
+   ════════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-family:var(--font-text);scroll-behavior:smooth;font-size:17px}
+body{background:var(--white);color:var(--text-primary);
+  line-height:1.47059;-webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+button,input,select,textarea{font-family:inherit}
+::selection{background:var(--link);color:#fff}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+img{display:block;max-width:100%}
+
+/* ════════════════════════════════════════════
+   SKIP LINK (A11y)
+   ════════════════════════════════════════════ */
+.skip-link{position:absolute;top:-100px;left:16px;padding:12px 24px;
+  background:var(--link);color:#fff;border-radius:980px;
+  font-weight:600;z-index:200;text-decoration:none;font-size:14px}
+.skip-link:focus{top:16px;outline:3px solid var(--link);outline-offset:2px}
+
+/* Focus */
+:focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:4px}
+
+/* ════════════════════════════════════════════
+   GLOBAL NAV — Apple-style sticky subnav
+   ════════════════════════════════════════════ */
+.globalnav{position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(251,251,253,.92);backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--separator-light)}
+.globalnav-inner{max-width:var(--content-width);margin:0 auto;padding:0 22px;
+  display:flex;justify-content:space-between;align-items:center;height:52px}
+.globalnav-title{font-family:var(--font-display);font-size:21px;font-weight:600;
+  letter-spacing:-0.01em;color:var(--text-primary);text-decoration:none}
+.globalnav-title:hover{text-decoration:none}
+.globalnav-links{display:flex;align-items:center;gap:30px;list-style:none}
+.globalnav-links a{font-size:12px;color:var(--text-secondary);font-weight:400;
+  letter-spacing:-0.01em;text-decoration:none;transition:color .3s;
+  position:relative;padding:14px 0}
+.globalnav-links a:hover{color:var(--text-primary);text-decoration:none}
+.globalnav-cta{padding:7px 18px;background:var(--cta-bg);color:#fff;
+  border:none;border-radius:980px;font-size:12px;font-weight:400;
+  cursor:pointer;text-decoration:none;display:inline-block;
+  letter-spacing:-0.01em;transition:background .3s ease, transform .2s ease}
+.globalnav-cta:hover{background:var(--cta-hover);text-decoration:none}
+.globalnav-cta:active{transform:scale(0.96)}
+
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;
+  background:none;border:none;padding:4px}
+.hamburger span{width:18px;height:1px;background:var(--text-primary);
+  border-radius:1px;transition:transform .3s ease, opacity .3s ease}
+
+/* ════════════════════════════════════════════
+   HERO — Apple product page hero
+   Large centered headline, description, CTA
+   ════════════════════════════════════════════ */
+.hero{padding:140px 0 100px;text-align:center;
+  background:var(--hero-bg)}
+.hero-inner{max-width:var(--content-width);margin:0 auto;padding:0 22px}
+
+.hero-eyebrow{font-family:var(--font-display);font-size:24px;font-weight:600;
+  color:var(--link);letter-spacing:-0.015em;margin-bottom:10px}
+
+.hero h1{font-family:var(--font-display);font-weight:700;
+  font-size:clamp(48px,7vw,96px);line-height:1.05;
+  letter-spacing:-0.045em;margin-bottom:16px;
+  color:var(--text-primary);text-wrap:balance}
+
+.hero-headline{font-family:var(--font-display);font-size:28px;font-weight:400;
+  color:var(--text-secondary);letter-spacing:-0.015em;
+  margin-bottom:36px;line-height:1.35;text-wrap:pretty;
+  max-width:var(--content-width-narrow);margin-left:auto;margin-right:auto}
+
+.hero-actions{display:flex;gap:18px;justify-content:center;
+  flex-wrap:wrap;margin-bottom:14px}
+
+.btn-cta{padding:12px 28px;background:var(--cta-bg);color:#fff;
+  border:none;border-radius:980px;font-size:17px;font-weight:400;
+  cursor:pointer;text-decoration:none;display:inline-flex;
+  align-items:center;gap:4px;transition:background .3s ease, transform .2s ease}
+.btn-cta:hover{background:var(--cta-hover);text-decoration:none}
+.btn-cta:active{transform:scale(0.96)}
+
+.btn-link{padding:12px 0;font-size:17px;font-weight:400;
+  color:var(--link);text-decoration:none;display:inline-flex;
+  align-items:center;gap:4px;cursor:pointer}
+.btn-link:hover{text-decoration:underline}
+.btn-link .chevron{font-size:20px;transition:transform .2s}
+.btn-link:hover .chevron{transform:translateX(2px)}
+
+.hero-meta{font-size:14px;color:var(--text-secondary);
+  margin-top:18px;letter-spacing:-0.01em}
+
+/* Terminal demo — Apple style: clean card with subtle rounding */
+.hero-demo{max-width:720px;margin:56px auto 0;
+  background:var(--text-primary);border-radius:14px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.08), 0 20px 60px rgba(0,0,0,.12)}
+.hero-demo-bar{height:36px;background:#2d2d2d;
+  display:flex;align-items:center;padding:0 14px;gap:7px}
+.hero-demo-dot{width:10px;height:10px;border-radius:50%}
+.hero-demo-dot.r{background:#ff5f57}
+.hero-demo-dot.y{background:#febc2e}
+.hero-demo-dot.g{background:#28c840}
+.hero-demo-title{margin-left:10px;font-family:var(--font-mono);font-size:12px;
+  color:rgba(255,255,255,.4);letter-spacing:.01em}
+.hero-demo-body{padding:24px;font-family:var(--font-mono);font-size:13px;
+  line-height:2.1;color:rgba(255,255,255,.55)}
+.hero-demo-body .cmd{color:rgba(255,255,255,.9);font-weight:500}
+.hero-demo-body .hl{color:#64d2ff;font-weight:500}
+.hero-demo-body .ok{color:#30d158;font-weight:500}
+.hero-demo-body .dim{color:rgba(255,255,255,.25)}
+.hero-demo-body .speech{color:#bf5af2}
+
+.code-line{opacity:0;transform:translateY(4px);
+  transition:opacity .5s ease, transform .5s ease}
+.code-line.typed{opacity:1;transform:translateY(0)}
+
+/* ════════════════════════════════════════════
+   SECTION — shared Apple rhythm
+   ════════════════════════════════════════════ */
+.section{padding:var(--section-padding) 0}
+.section-inner{max-width:var(--content-width);margin:0 auto;padding:0 22px}
+.section-alt{background:var(--section-alt)}
+
+.section-headline{font-family:var(--font-display);font-weight:700;
+  font-size:clamp(32px,5vw,56px);line-height:1.07143;
+  letter-spacing:-0.035em;text-align:center;
+  margin-bottom:12px;color:var(--text-primary);text-wrap:balance}
+
+.section-subheadline{font-family:var(--font-display);font-size:21px;
+  font-weight:400;color:var(--text-secondary);
+  text-align:center;max-width:620px;margin:0 auto 64px;
+  line-height:1.381;letter-spacing:-0.01em;text-wrap:pretty}
+
+/* ════════════════════════════════════════════
+   HOW IT WORKS — Apple-style numbered steps
+   Clean cards, left-aligned, no scrollytelling
+   ════════════════════════════════════════════ */
+.steps-grid{display:grid;grid-template-columns:1fr 1fr;
+  gap:20px;max-width:var(--content-width);margin:0 auto}
+
+.step-card{padding:40px;background:var(--white);
+  border-radius:18px;position:relative}
+.step-card:first-child{grid-column:1/-1;
+  display:grid;grid-template-columns:1fr 1fr;gap:40px;
+  align-items:center}
+
+.step-num{font-family:var(--font-display);font-size:14px;font-weight:600;
+  color:var(--text-secondary);letter-spacing:-0.01em;margin-bottom:16px}
+.step-card h3{font-family:var(--font-display);font-size:28px;font-weight:600;
+  letter-spacing:-0.025em;line-height:1.15;margin-bottom:12px;
+  color:var(--text-primary);text-wrap:balance}
+.step-card p{font-size:14px;color:var(--text-secondary);line-height:1.5;
+  max-width:380px;text-wrap:pretty}
+.step-key{display:inline-block;font-family:var(--font-mono);
+  font-size:11px;padding:5px 12px;background:var(--badge-bg);
+  color:var(--text-tertiary);letter-spacing:.02em;margin-top:16px;
+  border-radius:6px}
+
+/* Mini terminal inside step card */
+.step-visual{background:var(--text-primary);border-radius:12px;
+  padding:24px;font-family:var(--font-mono);font-size:12px;
+  line-height:2;color:rgba(255,255,255,.55)}
+.step-visual .hl{color:#64d2ff}
+.step-visual .speech{color:#bf5af2}
+.step-visual .ok{color:#30d158}
+
+/* ════════════════════════════════════════════
+   FEATURES — Apple tile grid
+   ════════════════════════════════════════════ */
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+
+.tile{padding:40px;background:var(--white);border-radius:18px}
+.tile-label{font-family:var(--font-text);font-size:12px;font-weight:600;
+  color:var(--link);margin-bottom:10px;letter-spacing:-0.01em}
+.tile h3{font-family:var(--font-display);font-size:24px;font-weight:600;
+  letter-spacing:-0.025em;line-height:1.17;margin-bottom:8px;
+  color:var(--text-primary);text-wrap:balance}
+.tile p{font-size:14px;color:var(--text-secondary);line-height:1.5;
+  text-wrap:pretty}
+.tile-code{font-family:var(--font-mono);font-size:12px;color:var(--text-tertiary);
+  margin-top:14px;padding:10px 14px;background:var(--section-alt);
+  border-radius:8px}
+
+/* ════════════════════════════════════════════
+   SPECS TABLE — Apple-style
+   Left labels, right values, hairline separators
+   ════════════════════════════════════════════ */
+.specs-section{text-align:left}
+.specs-section .section-headline,
+.specs-section .section-subheadline{text-align:left}
+
+.specs-layout{display:grid;grid-template-columns:1fr 1fr;
+  gap:60px;align-items:start;margin-top:48px}
+
+.specs-diagram{background:var(--text-primary);border-radius:14px;
+  padding:28px;font-family:var(--font-mono);font-size:13px;
+  line-height:2.2;color:rgba(255,255,255,.55);white-space:pre}
+.specs-diagram .layer{color:rgba(255,255,255,.9);font-weight:600}
+.specs-diagram .component{color:#64d2ff}
+.specs-diagram .note{color:rgba(255,255,255,.3)}
+
+.specs-table{display:flex;flex-direction:column}
+.spec-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:14px 0;border-bottom:1px solid var(--separator-light)}
+.spec-row:first-child{border-top:1px solid var(--separator-light)}
+.spec-label{font-size:14px;font-weight:400;color:var(--text-primary)}
+.spec-value{font-family:var(--font-mono);font-size:13px;
+  color:var(--text-secondary);flex-shrink:0;text-align:right;
+  font-variant-numeric:tabular-nums}
+
+/* ════════════════════════════════════════════
+   ABOUT — Research context
+   ════════════════════════════════════════════ */
+.about-content{max-width:var(--content-width-narrow);margin:0 auto}
+.about-content .section-headline,
+.about-content .section-subheadline{text-align:left}
+
+.about-badges{display:flex;gap:24px;align-items:center;margin:32px 0}
+.about-badges img{height:100px;width:auto;opacity:.7;transition:opacity .3s;
+  outline:1px solid rgba(0,0,0,.06);outline-offset:-1px;border-radius:4px}
+.about-badges img:hover{opacity:1}
+
+.about-quote{margin:48px 0;padding:0;border:none}
+.about-quote blockquote{font-family:var(--font-display);font-size:28px;
+  font-weight:600;line-height:1.3;letter-spacing:-0.025em;
+  color:var(--text-primary);text-wrap:balance}
+.about-quote blockquote::before{content:"\201C";color:var(--text-secondary)}
+.about-quote blockquote::after{content:"\201D";color:var(--text-secondary)}
+.about-quote cite{display:block;margin-top:12px;font-family:var(--font-text);
+  font-size:14px;color:var(--text-secondary);font-style:normal;font-weight:400}
+
+.about-link{display:inline-flex;align-items:center;gap:4px;
+  font-size:17px;color:var(--link);margin-top:24px}
+.about-link:hover{text-decoration:underline}
+
+/* Roadmap — Apple-style list */
+.roadmap{margin-top:48px;display:flex;flex-direction:column;gap:0}
+.roadmap-item{display:flex;justify-content:space-between;align-items:center;
+  padding:16px 0;border-bottom:1px solid var(--separator-light)}
+.roadmap-item:first-child{border-top:1px solid var(--separator-light)}
+.roadmap-name{font-size:14px;font-weight:400;color:var(--text-primary)}
+.roadmap-status{font-size:12px;font-weight:400;flex-shrink:0}
+.roadmap-status.done{color:var(--green)}
+.roadmap-status.active{color:var(--link)}
+.roadmap-status.planned{color:var(--text-secondary)}
+
+/* ════════════════════════════════════════════
+   NATIVE — Platform badges
+   ════════════════════════════════════════════ */
+.platform-badges{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+  margin-top:40px}
+.platform-badge{display:flex;align-items:center;gap:8px;padding:12px 20px;
+  background:var(--white);border-radius:980px;font-size:14px;
+  font-weight:400;color:var(--text-primary)}
+
+/* ════════════════════════════════════════════
+   CTA — Apple-style centered CTA
+   ════════════════════════════════════════════ */
+.cta-section{text-align:center;padding:var(--section-padding) 0;
+  background:var(--white)}
+.cta-section .section-headline{margin-bottom:8px}
+.cta-actions{margin-top:32px;display:flex;gap:18px;justify-content:center;
+  flex-wrap:wrap}
+.cta-meta{font-size:12px;color:var(--text-secondary);margin-top:14px;
+  letter-spacing:-0.01em}
+
+/* ════════════════════════════════════════════
+   A11Y NOTICE
+   ════════════════════════════════════════════ */
+.a11y-notice{max-width:var(--content-width);margin:0 auto;padding:16px 22px;
+  display:flex;gap:12px;align-items:center}
+.a11y-notice p{font-size:12px;color:var(--text-secondary);line-height:1.5}
+.a11y-notice a{color:var(--link)}
+.a11y-icon{flex-shrink:0;width:16px;height:16px;color:var(--text-secondary)}
+
+/* ════════════════════════════════════════════
+   FOOTER — Apple-style minimal footer
+   ════════════════════════════════════════════ */
+footer{padding:20px 0 40px;background:var(--section-alt)}
+.footer-inner{max-width:var(--content-width);margin:0 auto;padding:0 22px}
+
+.footer-directory{display:flex;justify-content:space-between;
+  flex-wrap:wrap;gap:40px;padding-bottom:24px;
+  border-bottom:1px solid var(--separator-light)}
+.footer-col h4{font-size:12px;font-weight:600;color:var(--text-primary);
+  margin-bottom:10px;letter-spacing:-0.01em}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.footer-col a{color:var(--text-secondary);font-size:12px;transition:color .3s;
+  padding:4px 0;display:inline-block}
+.footer-col a:hover{color:var(--text-primary);text-decoration:none}
+
+.footer-legal{display:flex;justify-content:space-between;
+  align-items:center;padding-top:16px;flex-wrap:wrap;gap:8px}
+.footer-legal p{font-size:12px;color:var(--text-secondary)}
+.footer-legal-links{display:flex;gap:16px}
+.footer-legal-links a{font-size:12px;color:var(--text-secondary)}
+.footer-legal-links a:hover{color:var(--text-primary);text-decoration:none}
+
+/* ════════════════════════════════════════════
+   SCROLL ANIMATIONS — Apple-style fade-up
+   Slow, graceful, no bounce
+   ════════════════════════════════════════════ */
+.fade-in{opacity:0;transform:translateY(20px);
+  transition:opacity .8s ease, transform .8s ease}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+.fade-in.d1{transition-delay:.1s}
+.fade-in.d2{transition-delay:.2s}
+.fade-in.d3{transition-delay:.3s}
+.fade-in.d4{transition-delay:.4s}
+
+/* ════════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════════ */
+@media(max-width:734px){
+  :root{--section-padding:80px}
+  .globalnav-links{display:none}
+  .hamburger{display:flex}
+  .hero{padding:120px 0 72px}
+  .hero h1{font-size:clamp(36px,10vw,56px)}
+  .hero-eyebrow{font-size:19px}
+  .hero-headline{font-size:19px}
+  .steps-grid{grid-template-columns:1fr}
+  .step-card:first-child{grid-template-columns:1fr}
+  .tile-grid{grid-template-columns:1fr}
+  .specs-layout{grid-template-columns:1fr}
+  .hero-actions{flex-direction:column;align-items:center}
+  .platform-badges{flex-direction:column;align-items:center}
+}
+
+/* ════════════════════════════════════════════
+   REDUCED MOTION
+   ════════════════════════════════════════════ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+  .fade-in{opacity:1;transform:none}
+  .code-line{opacity:1;transform:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- GLOBAL NAV — Apple subnav style -->
+  <nav class="globalnav" role="navigation" aria-label="Main navigation">
+    <div class="globalnav-inner">
+      <a href="#" class="globalnav-title">Math Recall</a>
+      <ul class="globalnav-links">
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#about">About</a></li>
+      </ul>
+      <a href="#download" class="globalnav-cta">Download</a>
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='false');this.closest('nav').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main id="main">
+
+    <!-- ═══ HERO ═══ -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-inner">
+        <p class="hero-eyebrow fade-in">Accessibility for macOS</p>
+        <h1 id="hero-heading" class="fade-in d1">Reach into<br>equations.</h1>
+        <p class="hero-headline fade-in d2">The first tool that lets screen reader users structurally navigate mathematical expressions. Not linearly. Structurally.</p>
+        <div class="hero-actions fade-in d3">
+          <a href="#download" class="btn-cta">Download for macOS</a>
+          <a href="#how-it-works" class="btn-link">See how it works <span class="chevron" aria-hidden="true">&#8250;</span></a>
+        </div>
+        <p class="hero-meta fade-in d4">Free and open source &middot; macOS 15.2+ &middot; VoiceOver-native &middot; MIT License</p>
+
+        <!-- Terminal demo -->
+        <div class="hero-demo fade-in d4" role="region" aria-label="Demo: navigating an equation with Math Recall">
+          <div class="hero-demo-bar" aria-hidden="true">
+            <div class="hero-demo-dot r"></div>
+            <div class="hero-demo-dot y"></div>
+            <div class="hero-demo-dot g"></div>
+            <span class="hero-demo-title">math-recall — recall mode</span>
+          </div>
+          <div class="hero-demo-body" id="termDemo">
+            <div class="code-line" data-delay="0"><span class="dim">// Input captured from Notes.app via Accessibility API</span></div>
+            <div class="code-line" data-delay="200"><span class="cmd">equation:</span> <span class="hl">x&#178; + 3x + 5 = 20</span></div>
+            <div class="code-line" data-delay="500"><span class="dim">&nbsp;</span></div>
+            <div class="code-line" data-delay="700"><span class="dim">// Tree built. Entering recall mode...</span></div>
+            <div class="code-line" data-delay="1000"><span class="cmd">press</span> <span class="hl">1</span>   <span class="speech">&rarr; "Line 1, equation"</span></div>
+            <div class="code-line" data-delay="1300"><span class="cmd">press</span> <span class="hl">L</span>   <span class="speech">&rarr; "Left side, 3 items"</span></div>
+            <div class="code-line" data-delay="1600"><span class="cmd">press</span> <span class="hl">1</span>   <span class="speech">&rarr; "x squared"</span></div>
+            <div class="code-line" data-delay="2000"><span class="dim">&nbsp;</span></div>
+            <div class="code-line" data-delay="2200"><span class="cmd">press</span> <span class="hl">Space</span>  <span class="ok">&rarr; x&#178; inserted at cursor</span></div>
+            <div class="code-line" data-delay="2600"><span class="dim">&nbsp;</span></div>
+            <div class="code-line" data-delay="2800"><span class="dim">// 3 keystrokes. Exact sub-expression. Zero vision required.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ HOW IT WORKS ═══ -->
+    <section class="section section-alt" id="how-it-works" aria-labelledby="hiw-heading">
+      <div class="section-inner">
+        <h2 id="hiw-heading" class="section-headline fade-in">A new way to experience math.</h2>
+        <p class="section-subheadline fade-in d1">Four steps. Three keystrokes. Every equation becomes a structure you can explore, not a sentence you endure.</p>
+
+        <div class="steps-grid">
+          <!-- Step 1 — spans full width with visual -->
+          <div class="step-card fade-in d2">
+            <div>
+              <div class="step-num">01 &mdash; The Problem</div>
+              <h3>Equations are walls, not windows.</h3>
+              <p>A sighted student glances at x&sup2; + 3x + 5 = 20 and instantly isolates the first term. A blind student hears the entire expression read start to finish, every time. There's no way to jump ahead, no way to grab a sub-expression, and no way to insert it into your own work.</p>
+              <div class="step-key">Linear &middot; No structure &middot; No selection</div>
+            </div>
+            <div class="step-visual" aria-hidden="true">
+              <div><span class="hl">x&#178; + 3x + 5 = 20</span></div>
+              <div>&nbsp;</div>
+              <div><span class="speech">"x squared plus 3 x</span></div>
+              <div><span class="speech"> plus 5 equals 20"</span></div>
+              <div>&nbsp;</div>
+              <div style="color:rgba(255,255,255,.25)">&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;&#9654;</div>
+              <div style="color:rgba(255,255,255,.25);font-size:10px;margin-top:4px">NO STRUCTURE — CAN'T SELECT PARTS</div>
+            </div>
+          </div>
+
+          <!-- Steps 2–4 -->
+          <div class="step-card fade-in d2">
+            <div class="step-num">02 &mdash; Capture</div>
+            <h3>Math Recall reads what you're working on.</h3>
+            <p>Copy an equation or let Math Recall capture it directly from the focused app using macOS Accessibility APIs. The equation is instantly parsed into a tree structure.</p>
+            <div class="step-key">Clipboard or Accessibility API &rarr; Navigable tree</div>
+          </div>
+
+          <div class="step-card fade-in d3">
+            <div class="step-num">03 &mdash; Navigate</div>
+            <h3>Line. Side. Term.</h3>
+            <p>Press a number to pick a line. L or R for a side. Another number for a term. VoiceOver announces every step: "Left side, 3 items" &rarr; "x squared."</p>
+            <div class="step-key">Number &rarr; Side &rarr; Number</div>
+          </div>
+
+          <div class="step-card fade-in d4">
+            <div class="step-num">04 &mdash; Extract</div>
+            <h3>Space. Inserted. Done.</h3>
+            <p>Press Space. The selected sub-expression is inserted at your cursor. You never left your editor. The entire interaction was non-visual and took under two seconds.</p>
+            <div class="step-key">x&#178; &rarr; cursor &middot; Zero vision required</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ FEATURES ═══ -->
+    <section class="section" id="features" aria-labelledby="features-heading">
+      <div class="section-inner">
+        <h2 id="features-heading" class="section-headline fade-in">Calculus-level math.<br>From plain text.</h2>
+        <p class="section-subheadline fade-in d1">No LaTeX required. No MathML. Math Recall accepts the kind of math notation people actually type.</p>
+
+        <div class="tile-grid">
+          <div class="tile fade-in">
+            <div class="tile-label">Expressions</div>
+            <h3>Equations, powers, fractions</h3>
+            <p>Full operator precedence, implicit multiplication, multi-line equation support with tolerant parsing.</p>
+            <div class="tile-code">x^2 + 3x = 7 &nbsp;&bull;&nbsp; (x+1)/(x-1) &nbsp;&bull;&nbsp; 3x &rarr; 3*x</div>
+          </div>
+          <div class="tile fade-in d1">
+            <div class="tile-label">Calculus</div>
+            <h3>Integrals, derivatives, limits</h3>
+            <p>Definite and indefinite integrals, derivative notation, limit expressions with approach syntax.</p>
+            <div class="tile-code">int_0^1 x^2 dx &nbsp;&bull;&nbsp; d/dx &nbsp;&bull;&nbsp; lim_x-&gt;0</div>
+          </div>
+          <div class="tile fade-in d2">
+            <div class="tile-label">Functions</div>
+            <h3>Trig, logarithms, roots</h3>
+            <p>sin, cos, tan, ln, log, square roots, nth roots. All parsed into navigable tree nodes.</p>
+            <div class="tile-code">sin(x) &nbsp;&bull;&nbsp; ln(e^x) &nbsp;&bull;&nbsp; sqrt(x) &nbsp;&bull;&nbsp; root3(8)</div>
+          </div>
+          <div class="tile fade-in d3">
+            <div class="tile-label">Resilience</div>
+            <h3>Error-tolerant by design</h3>
+            <p>Skips non-math lines. Preserves last valid path on error. 400ms multi-digit input buffering. Never drops you out of recall mode.</p>
+            <div class="tile-code">// When your user can't see the screen, you don't crash.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ARCHITECTURE / SPECS ═══ -->
+    <section class="section section-alt specs-section" id="architecture" aria-labelledby="arch-heading">
+      <div class="section-inner">
+        <h2 id="arch-heading" class="section-headline fade-in">Five layers. Each<br>independently testable.</h2>
+        <p class="section-subheadline fade-in d1">A deliberate pipeline, not a monolith. Every component can be run and verified in isolation.</p>
+
+        <div class="specs-layout">
+          <div class="specs-diagram fade-in" role="img" aria-label="Architecture diagram showing five layers: Input, Parser, Navigation Engine, Speech Controller, Serializer">
+<span class="layer">Input Layer</span>
+  <span class="component">  FocusedTextReader</span>  <span class="note">// AXUIElement APIs</span>
+  <span class="component">  ClipboardMonitor</span>   <span class="note">// Fallback capture</span>
+
+<span class="layer">Parser</span>
+  <span class="component">  Tokenizer</span>          <span class="note">// Plain text &rarr; tokens</span>
+  <span class="component">  Parser</span>             <span class="note">// Tokens &rarr; MathNode AST</span>
+
+<span class="layer">Navigation Engine</span>
+  <span class="component">  RecallNavigator</span>    <span class="note">// Tree traversal + state</span>
+
+<span class="layer">Speech Controller</span>
+  <span class="component">  SpeechController</span>   <span class="note">// NSAccessibility announce</span>
+
+<span class="layer">Serializer</span>
+  <span class="component">  NodeSerializer</span>     <span class="note">// MathNode &rarr; plain text</span></div>
+
+          <div class="specs-table fade-in d1">
+            <div class="spec-row"><span class="spec-label">Language</span><span class="spec-value">Swift</span></div>
+            <div class="spec-row"><span class="spec-label">Platform</span><span class="spec-value">macOS 15.2+</span></div>
+            <div class="spec-row"><span class="spec-label">UI Framework</span><span class="spec-value">SwiftUI</span></div>
+            <div class="spec-row"><span class="spec-label">Global Hotkeys</span><span class="spec-value">Carbon API</span></div>
+            <div class="spec-row"><span class="spec-label">Text Capture</span><span class="spec-value">AXUIElement</span></div>
+            <div class="spec-row"><span class="spec-label">Speech</span><span class="spec-value">NSAccessibility</span></div>
+            <div class="spec-row"><span class="spec-label">Tests</span><span class="spec-value">42+ across 4 suites</span></div>
+            <div class="spec-row"><span class="spec-label">License</span><span class="spec-value">MIT</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ABOUT ═══ -->
+    <section class="section" id="about" aria-labelledby="about-heading">
+      <div class="section-inner">
+        <div class="about-content">
+          <h2 id="about-heading" class="section-headline fade-in">Born from research.<br>Built at the University of Washington.</h2>
+          <p class="section-subheadline fade-in d1">Math Recall started as <em>We Are All Blind</em> — an accessibility research project in HCDE 515 where we co-designed with a blind computer science student to understand how he actually experiences math. The finding was clear: the barrier isn't comprehension. It's memory.</p>
+
+          <div class="about-badges fade-in d2">
+            <img src="uw-badge.png" alt="University of Washington seal">
+            <img src="hcde-badge.png" alt="Human Centered Design & Engineering">
+          </div>
+
+          <div class="about-quote fade-in d2">
+            <blockquote>If a human scribe is a 10, this tool is like a 9 or 9.5.</blockquote>
+            <cite>Abdallah Altahaineh, design partner, after testing the prototype</cite>
+          </div>
+
+          <a href="case-study.html" class="about-link fade-in d3">Read the full case study <span class="chevron" aria-hidden="true">&#8250;</span></a>
+
+          <div class="roadmap fade-in d3" role="list" aria-label="Project roadmap">
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">Phase 1 — Core parsing, navigation, serialization, speech</span>
+              <span class="roadmap-status done" aria-label="Complete">Complete</span>
+            </div>
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">Phase 2 — macOS integration, screen reader capture via AXUIElement</span>
+              <span class="roadmap-status done" aria-label="Complete">Complete</span>
+            </div>
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">Phase 3 — Floating panel UI, reading mode, VoiceOver polish</span>
+              <span class="roadmap-status active" aria-label="In progress">In Progress</span>
+            </div>
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">v2 — Matrices, piecewise functions, summation/product notation</span>
+              <span class="roadmap-status planned" aria-label="Planned">Future</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ NATIVE ═══ -->
+    <section class="section section-alt" aria-labelledby="native-heading">
+      <div class="section-inner" style="text-align:center">
+        <h2 id="native-heading" class="section-headline fade-in">Built with Swift.<br>Runs on your Mac.</h2>
+        <p class="section-subheadline fade-in d1">No Electron. No browser. A native macOS app that starts instantly, uses minimal resources, and respects your system accessibility settings.</p>
+        <div class="platform-badges">
+          <div class="platform-badge fade-in" role="img" aria-label="Requires macOS 15.2 or later"><span aria-hidden="true">&#63743;</span> macOS 15.2+</div>
+          <div class="platform-badge fade-in d1" role="img" aria-label="Built with Swift and SwiftUI"><span aria-hidden="true">&#9883;</span> Swift &amp; SwiftUI</div>
+          <div class="platform-badge fade-in d2" role="img" aria-label="VoiceOver ready"><span aria-hidden="true">&#128065;</span> VoiceOver Ready</div>
+          <div class="platform-badge fade-in d3" role="img" aria-label="100 percent local processing"><span aria-hidden="true">&#128274;</span> 100% Local</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CTA ═══ -->
+    <section class="cta-section" id="download" aria-labelledby="cta-heading">
+      <div class="section-inner">
+        <h2 id="cta-heading" class="section-headline fade-in">Navigate math<br>on your terms.</h2>
+        <p class="section-subheadline fade-in d1" style="margin-bottom:0">Download Math Recall and start working with equations the way you think about them — as a structure you can explore, not a sentence you have to sit through.</p>
+        <div class="cta-actions fade-in d2">
+          <a href="#" class="btn-cta">Download for macOS</a>
+          <a href="https://github.com/AsimSayed/symbolic-state-recall" class="btn-link" target="_blank" rel="noopener noreferrer">View on GitHub <span class="chevron" aria-hidden="true">&#8250;</span></a>
+        </div>
+        <p class="cta-meta fade-in d3">Free during beta &middot; macOS 15.2+ &middot; Apple Silicon &amp; Intel</p>
+      </div>
+    </section>
+
+    <!-- A11Y NOTICE -->
+    <div class="fade-in" style="padding:0 22px;border:none">
+      <div class="a11y-notice" role="note" aria-label="Accessibility statement">
+        <svg class="a11y-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor" stroke="none"/><path d="M9.5 10h5M12 10v4"/><path d="M9 17l1.5-3h3L15 17"/></svg>
+        <p>This page and the Math Recall application are designed to meet WCAG 2.1 AA accessibility standards. If you encounter any accessibility issue, please <a href="mailto:asim.g.sayed@gmail.com">contact us</a>.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-directory">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#download">Download</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#">Documentation</a></li>
+            <li><a href="#">Changelog</a></li>
+            <li><a href="#">Accessibility Statement</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="mailto:asim.g.sayed@gmail.com">Email</a></li>
+            <li><a href="https://github.com/AsimSayed/symbolic-state-recall" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-legal">
+        <p>&copy; 2026 Math Recall. University of Washington HCDE.</p>
+        <div class="footer-legal-links">
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Accessibility</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  // Code typing animation
+  function animateCode(id) {
+    const block = document.getElementById(id);
+    if (!block) return;
+    const lines = block.querySelectorAll('.code-line');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          lines.forEach(line => {
+            const delay = parseInt(line.dataset.delay) || 0;
+            setTimeout(() => line.classList.add('typed'), delay);
+          });
+          obs.unobserve(block);
+        }
+      });
+    }, { threshold: 0.2 });
+    obs.observe(block);
+  }
+  animateCode('termDemo');
+
+  // Scroll reveal — Apple-style slow fade-up
+  const fadeObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        fadeObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.fade-in').forEach(el => fadeObs.observe(el));
+  </script>
+<!-- Annotate.js — visual feedback tool for AI agents (drop-in, no React) -->
+<script src="../annotate.js"></script>
+</body>
+</html>

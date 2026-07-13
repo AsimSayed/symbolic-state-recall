@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Recall — Navigate math by feel, not by sight</title>
+<meta name="description" content="Math Recall lets blind and visually impaired users navigate, query, and insert complex mathematical expressions using tree-based symbolic recall. Built for macOS.">
+<meta property="og:title" content="Math Recall — Navigate math by feel, not by sight">
+<meta property="og:description" content="The first tool that lets screen reader users structurally navigate math. Not linearly. Structurally.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════
+   FONTS
+   ════════════════════════════════════════════ */
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Geist Mono';src:url('https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Medium.woff2') format('woff2');font-weight:500;font-display:swap}
+
+/* ════════════════════════════════════════════
+   TOKENS — Light mode, soft palette
+   ════════════════════════════════════════════ */
+:root {
+  --bg: #fafbfc;
+  --bg-warm: #f5f3f0;
+  --bg-card: #ffffff;
+  --bg-subtle: #f0f1f4;
+  --bg-deep: #eaecf0;
+  --bg-raised: #ffffff;
+  --text: #1a1d26;
+  --text-2: #5c6274;
+  --text-3: #9ba2b4;
+  --blue: #4a7cec;
+  --blue-soft: rgba(74,124,236,.08);
+  --blue-medium: rgba(74,124,236,.14);
+  --blue-glow: rgba(74,124,236,.06);
+  --purple: #7c5ce7;
+  --purple-soft: rgba(124,92,231,.08);
+  --green: #16a34a;
+  --red: #dc2626;
+  --border: rgba(0,0,0,.07);
+  --border-hover: rgba(0,0,0,.14);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.03);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.04);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-xl: 0 24px 64px rgba(0,0,0,.1), 0 8px 24px rgba(0,0,0,.05);
+  --radius: 20px;
+  --radius-sm: 14px;
+  --radius-xs: 10px;
+  --font: 'Geist', -apple-system, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  --heading: 'Space Grotesk', -apple-system, system-ui, sans-serif;
+  /* Bounce easing */
+  --spring: cubic-bezier(.34,1.56,.64,1);
+}
+
+/* ════════════════════════════════════════════
+   BASE
+   ════════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-family:var(--font);scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);
+  font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden}
+button,input,select,textarea{font-family:inherit}
+::selection{background:var(--blue);color:#fff}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+
+.wrap{max-width:1080px;margin:0 auto;padding:0 40px}
+
+/* ════════════════════════════════════════════
+   SKIP LINK
+   ════════════════════════════════════════════ */
+.skip-link{position:absolute;top:-100px;left:16px;padding:12px 24px;
+  background:var(--blue);color:#fff;border-radius:100px;
+  font-weight:600;z-index:200;text-decoration:none;font-size:14px}
+.skip-link:focus{top:16px;outline:3px solid var(--blue);outline-offset:2px}
+
+/* ════════════════════════════════════════════
+   FOCUS STYLES (A11y)
+   ════════════════════════════════════════════ */
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+
+/* ════════════════════════════════════════════
+   NAV
+   ════════════════════════════════════════════ */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(250,251,252,.88);backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border)}
+.nav-in{max-width:1080px;margin:0 auto;padding:0 40px;
+  display:flex;justify-content:space-between;align-items:center;height:60px}
+.nav-logo{font-family:var(--heading);font-size:18px;font-weight:700;
+  letter-spacing:-0.02em;color:var(--text)}
+.nav-logo span{color:var(--blue)}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{font-size:14px;color:var(--text-2);font-weight:500;
+  transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{padding:9px 22px;background:var(--text);color:#fff;
+  border:none;border-radius:100px;font-size:14px;font-weight:600;
+  cursor:pointer;text-decoration:none;display:inline-block;
+  transition:transform .35s var(--spring), box-shadow .2s}
+.nav-cta:hover{transform:translateY(-2px) scale(1.02);box-shadow:var(--shadow-md)}
+
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;
+  background:none;border:none;padding:4px}
+.hamburger span{width:20px;height:1.5px;background:var(--text);
+  border-radius:2px;transition:.3s}
+
+/* ════════════════════════════════════════════
+   HERO — v2 layout (left-aligned)
+   ════════════════════════════════════════════ */
+.hero{padding:160px 0 80px;position:relative}
+.hero::before{content:"";position:absolute;top:-40px;left:50%;
+  transform:translateX(-50%);width:700px;height:500px;
+  background:radial-gradient(ellipse,rgba(74,124,236,.05) 0%,rgba(124,92,231,.02) 40%,transparent 70%);
+  pointer-events:none}
+
+/* v1 pill badge */
+.hero-badge{display:inline-block;padding:6px 18px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:100px;font-size:13px;color:var(--blue);
+  font-weight:500;margin-bottom:28px;letter-spacing:.02em;
+  box-shadow:var(--shadow-sm)}
+
+.hero h1{font-family:var(--heading);font-weight:700;
+  font-size:clamp(48px,9vw,88px);line-height:.94;
+  letter-spacing:-0.035em;margin-bottom:24px;max-width:720px}
+.hero h1 .accent{color:var(--blue)}
+
+.hero-sub{font-size:19px;line-height:1.65;color:var(--text-2);
+  max-width:540px;margin-bottom:40px}
+
+.hero-actions{display:flex;gap:14px;align-items:center;
+  flex-wrap:wrap;margin-bottom:18px}
+
+.btn-primary{padding:14px 32px;background:var(--text);color:#fff;
+  border:none;border-radius:100px;font-size:15px;font-weight:600;
+  cursor:pointer;text-decoration:none;display:inline-block;
+  transition:transform .4s var(--spring), box-shadow .25s}
+.btn-primary:hover{transform:translateY(-2px) scale(1.03);
+  box-shadow:0 8px 30px rgba(26,29,38,.18)}
+
+.btn-secondary{padding:14px 32px;background:transparent;color:var(--text-2);
+  border:1px solid var(--border);border-radius:100px;font-size:15px;
+  font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;
+  transition:transform .4s var(--spring), border-color .2s, box-shadow .25s, color .2s}
+.btn-secondary:hover{transform:translateY(-2px) scale(1.03);
+  border-color:var(--border-hover);box-shadow:var(--shadow-sm);color:var(--text)}
+
+.hero-note{font-family:var(--mono);font-size:12px;color:var(--text-3);
+  letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Terminal demo in hero */
+.terminal{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);margin-top:56px;overflow:hidden;
+  box-shadow:var(--shadow-lg);
+  transition:transform .5s var(--spring), box-shadow .3s}
+.terminal:hover{transform:translateY(-4px) scale(1.005);box-shadow:var(--shadow-xl)}
+.terminal-bar{height:40px;background:var(--bg-subtle);
+  border-bottom:1px solid var(--border);display:flex;
+  align-items:center;padding:0 16px;gap:7px}
+.terminal-dot{width:10px;height:10px;border-radius:50%}
+.terminal-dot.r{background:#ff5f57}
+.terminal-dot.y{background:#febc2e}
+.terminal-dot.g{background:#28c840}
+.terminal-title{margin-left:10px;font-family:var(--mono);font-size:12px;
+  color:var(--text-3);letter-spacing:.02em}
+.terminal-body{padding:28px 24px;font-family:var(--mono);font-size:13px;
+  line-height:2.1;color:var(--text-2)}
+.terminal-body .cmd{color:var(--text);font-weight:500}
+.terminal-body .hl{color:var(--blue);font-weight:500}
+.terminal-body .ok{color:var(--green);font-weight:500}
+.terminal-body .dim{color:var(--text-3)}
+.terminal-body .speech{color:var(--purple)}
+
+/* Code typing animation */
+.code-line{opacity:0;transform:translateX(-6px);
+  transition:opacity .4s ease, transform .5s var(--spring)}
+.code-line.typed{opacity:1;transform:translateX(0)}
+
+/* ════════════════════════════════════════════
+   SECTIONS — shared
+   ════════════════════════════════════════════ */
+.sec{padding:96px 0}
+
+.sec-label{font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--blue);font-weight:500;
+  margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.sec-label::before{content:"";width:12px;height:1px;background:var(--blue)}
+
+.sec h2{font-family:var(--heading);font-weight:700;
+  font-size:clamp(32px,5vw,48px);line-height:1.05;
+  letter-spacing:-0.025em;margin-bottom:16px}
+.sec h2 .accent{color:var(--blue)}
+
+.sec p.desc{font-size:17px;line-height:1.7;color:var(--text-2);
+  max-width:580px;margin-bottom:48px}
+.sec p.desc strong{color:var(--text);font-weight:500}
+
+/* ════════════════════════════════════════════
+   SCROLLYTELLING — How it works (from v2)
+   ════════════════════════════════════════════ */
+.scroll-section{padding:96px 0;position:relative;
+  background:var(--bg-warm);border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border)}
+
+.scroll-layout{display:grid;grid-template-columns:1fr 1fr;
+  gap:56px;min-height:180vh}
+
+.scroll-sticky{position:sticky;top:100px;
+  height:calc(100vh - 160px);
+  display:flex;align-items:center;justify-content:center}
+.scroll-sticky-inner{width:100%;height:100%;max-height:520px;
+  background:#0d0f14;border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius);position:relative;overflow:hidden;
+  box-shadow:var(--shadow-xl)}
+
+.scroll-section h2{font-family:var(--heading);font-weight:700;
+  font-size:clamp(32px,5vw,48px);line-height:1.05;
+  letter-spacing:-0.025em}
+.scroll-section h2 .accent{color:var(--blue)}
+
+.scroll-steps{display:flex;flex-direction:column;gap:40px;padding:100px 0}
+
+.scroll-step{padding:36px;border:1px solid var(--border);
+  background:var(--bg-card);border-radius:var(--radius-sm);
+  opacity:.35;transform:translateY(8px);min-height:240px;
+  transition:opacity .5s ease, transform .5s var(--spring),
+  border-color .5s ease, box-shadow .5s ease}
+.scroll-step.active{opacity:1;transform:translateY(0);
+  border-color:var(--blue);box-shadow:0 0 32px var(--blue-soft)}
+
+.scroll-step-num{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+.scroll-step h3{font-family:var(--heading);font-size:22px;font-weight:600;
+  letter-spacing:-0.02em;margin-bottom:10px}
+.scroll-step p{font-size:15px;color:var(--text-2);line-height:1.7}
+.scroll-step .step-key{display:inline-block;font-family:var(--mono);
+  font-size:11px;padding:5px 12px;background:var(--blue-soft);
+  color:var(--blue);letter-spacing:.03em;margin-top:14px;
+  border:1px solid rgba(74,124,236,.12);border-radius:8px}
+
+/* SVG visualization layers */
+.viz-layer{position:absolute;top:0;left:0;width:100%;height:100%;
+  transition:opacity .6s ease, transform .6s var(--spring)}
+.viz-layer.hidden{opacity:0;transform:scale(.96)}
+.viz-layer.visible{opacity:1;transform:scale(1)}
+.viz-layer svg{width:100%;height:100%}
+
+/* SVG animation keyframes */
+@keyframes float-node{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+/* ════════════════════════════════════════════
+   FEATURES — What it parses (from v2)
+   ════════════════════════════════════════════ */
+.features-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:48px}
+
+.feature{padding:28px;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);
+  transition:transform .4s var(--spring), box-shadow .25s, border-color .25s}
+.feature:hover{transform:translateY(-4px);box-shadow:var(--shadow-md);
+  border-color:var(--border-hover)}
+
+.feature-label{font-family:var(--body);font-size:12px;font-weight:500;
+  color:var(--blue);margin-bottom:8px;display:inline-block;
+  padding:3px 10px;background:rgba(74,124,236,.08);border-radius:100px}
+.feature h3{font-family:var(--heading);font-size:17px;font-weight:600;
+  margin-bottom:6px;letter-spacing:-0.01em}
+.feature p{font-size:14px;color:var(--text-2);line-height:1.65}
+.feature-code{font-family:var(--mono);font-size:12px;color:var(--text-3);
+  margin-top:10px;padding:10px 14px;background:var(--bg-subtle);
+  border:1px solid var(--border);border-radius:var(--radius-xs)}
+
+/* ════════════════════════════════════════════
+   ARCHITECTURE (from v2)
+   ════════════════════════════════════════════ */
+.arch-section{background:var(--bg-warm)}
+
+.arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;
+  margin-top:48px;align-items:start}
+
+.arch-diagram{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:28px;font-family:var(--mono);
+  font-size:13px;line-height:2.2;color:var(--text-2);
+  box-shadow:var(--shadow-sm);white-space:pre}
+.arch-diagram .layer{color:var(--text);font-weight:600}
+.arch-diagram .component{color:var(--blue)}
+.arch-diagram .note{color:var(--text-3)}
+
+.arch-specs{display:flex;flex-direction:column;gap:0}
+.spec-row{display:flex;justify-content:space-between;align-items:baseline;
+  padding:14px 0;border-bottom:1px solid var(--border)}
+.spec-row:first-child{border-top:1px solid var(--border)}
+.spec-key{font-size:15px;font-weight:500;color:var(--text)}
+.spec-val{font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-2);flex-shrink:0}
+
+/* ════════════════════════════════════════════
+   ABOUT (research-focused)
+   ════════════════════════════════════════════ */
+.about-badges{display:flex;gap:24px;align-items:center;margin-top:32px}
+.about-badges img{height:120px;width:auto;opacity:.85;transition:opacity .3s}
+.about-badges img:hover{opacity:1}
+
+.about-story{margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:32px;
+  align-items:start}
+.about-story-text{font-size:16px;line-height:1.8;color:var(--text-2)}
+.about-story-text p+p{margin-top:16px}
+.about-photo{border-radius:var(--radius-sm);overflow:hidden;
+  border:1px solid var(--border);box-shadow:var(--shadow-sm)}
+.about-photo img{width:100%;height:auto;display:block}
+.about-photo-caption{font-family:var(--mono);font-size:11px;color:var(--text-3);
+  padding:12px 16px;background:var(--bg-card);letter-spacing:.02em}
+
+.about-quote{margin-top:48px;padding:32px 40px;background:var(--bg-card);
+  border:1px solid var(--border);border-left:3px solid var(--blue);
+  border-radius:var(--radius-sm);box-shadow:var(--shadow-sm)}
+.about-quote blockquote{font-family:var(--heading);font-size:22px;font-weight:500;
+  line-height:1.6;letter-spacing:-0.01em;color:var(--text-1)}
+.about-quote cite{display:block;margin-top:12px;font-family:var(--mono);
+  font-size:12px;color:var(--text-3);font-style:normal;letter-spacing:.03em}
+
+.btn-case-study{display:inline-block;padding:14px 32px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:100px;font-family:var(--body);font-size:15px;font-weight:600;
+  color:var(--text-1);text-decoration:none;transition:all .3s var(--spring);
+  box-shadow:var(--shadow-sm)}
+.btn-case-study:hover{border-color:var(--blue);color:var(--blue);
+  transform:translateY(-2px);box-shadow:var(--shadow-md)}
+
+.about-grid{display:grid;grid-template-columns:1fr;gap:24px;
+  margin-top:48px;align-items:start}
+
+.roadmap{display:flex;flex-direction:column;gap:8px}
+.roadmap-item{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-xs);padding:18px 22px;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  box-shadow:var(--shadow-sm)}
+.roadmap-name{font-size:15px;font-weight:500}
+.roadmap-status{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;flex-shrink:0}
+.roadmap-status.done{color:var(--green)}
+.roadmap-status.active{color:var(--blue)}
+.roadmap-status.planned{color:var(--text-3)}
+
+/* ════════════════════════════════════════════
+   NATIVE MAC APP (from v1)
+   ════════════════════════════════════════════ */
+.native-section{text-align:center;background:var(--bg-warm)}
+
+.native-section .sec-label{justify-content:center}
+.native-section .sec-label::before{display:none}
+.native-section h2{text-align:center;max-width:500px;margin-left:auto;margin-right:auto}
+.native-section p.native-desc{font-size:17px;color:var(--text-2);
+  max-width:520px;margin:0 auto 32px;line-height:1.7;text-align:center}
+
+.native-badges{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.badge{display:flex;align-items:center;gap:8px;padding:12px 20px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:100px;font-size:14px;font-weight:500;color:var(--text-2);
+  box-shadow:var(--shadow-sm);
+  transition:transform .4s var(--spring), box-shadow .2s}
+.badge:hover{transform:translateY(-2px) scale(1.03);box-shadow:var(--shadow-md)}
+
+/* ════════════════════════════════════════════
+   CTA — Get Started (from v1)
+   ════════════════════════════════════════════ */
+.cta-section{text-align:center;padding:96px 0;position:relative}
+.cta-section::before{content:"";position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);width:500px;height:400px;
+  background:radial-gradient(ellipse,rgba(74,124,236,.05) 0%,transparent 70%);
+  pointer-events:none}
+
+.cta-section .sec-label{justify-content:center}
+.cta-section .sec-label::before{display:none}
+.cta-section h2{font-family:var(--heading);font-weight:700;
+  font-size:clamp(32px,5vw,48px);line-height:1.05;letter-spacing:-0.025em;
+  text-align:center;max-width:500px;margin:0 auto 18px}
+.cta-section h2 .accent{color:var(--blue)}
+.cta-section p.cta-desc{font-size:17px;color:var(--text-2);
+  max-width:520px;margin:0 auto 36px;line-height:1.7;text-align:center}
+.cta-section .hero-note{justify-content:center}
+
+/* ════════════════════════════════════════════
+   A11Y NOTICE
+   ════════════════════════════════════════════ */
+.a11y-notice{max-width:1080px;margin:0 auto;padding:20px 24px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);margin-top:48px;
+  display:flex;gap:14px;align-items:center;box-shadow:var(--shadow-sm)}
+.a11y-notice p{font-size:14px;color:var(--text-3);line-height:1.6}
+.a11y-icon{flex-shrink:0;width:20px;height:20px;color:var(--blue)}
+
+/* ════════════════════════════════════════════
+   FOOTER (from v1)
+   ════════════════════════════════════════════ */
+footer{padding:64px 0 40px}
+
+.footer-inner{display:flex;justify-content:space-between;
+  align-items:flex-start;flex-wrap:wrap;gap:40px}
+
+.footer-brand p{color:var(--text-3);font-size:14px;margin-top:8px;
+  max-width:260px;line-height:1.6}
+
+.footer-col h4{font-family:var(--mono);font-size:11px;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);
+  margin-bottom:14px;font-weight:500}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+.footer-col a{color:var(--text-2);font-size:14px;transition:color .2s}
+.footer-col a:hover{color:var(--blue)}
+
+.footer-bottom{margin-top:48px;padding-top:20px;
+  border-top:1px solid var(--border);text-align:center;
+  font-size:13px;color:var(--text-3)}
+
+/* ════════════════════════════════════════════
+   ANIMATIONS — Bounce-in on scroll
+   ════════════════════════════════════════════ */
+.rv{opacity:0;transform:translateY(20px) scale(.98);
+  transition:opacity .6s ease, transform .7s var(--spring)}
+.rv.vis{opacity:1;transform:translateY(0) scale(1)}
+.rv.d1{transition-delay:.08s}
+.rv.d2{transition-delay:.16s}
+.rv.d3{transition-delay:.24s}
+.rv.d4{transition-delay:.32s}
+
+/* ════════════════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════════════════ */
+@media(max-width:900px){
+  .wrap{padding:0 20px}
+  .nav-in{padding:0 20px}
+  .nav-links{display:none}
+  .hamburger{display:flex}
+  .sec{padding:72px 0}
+  .hero{padding:130px 0 64px}
+  .hero h1{font-size:clamp(36px,9vw,56px)}
+  .features-grid{grid-template-columns:1fr}
+  .arch-grid{grid-template-columns:1fr}
+  .about-story{grid-template-columns:1fr}
+  .scroll-layout{grid-template-columns:1fr;min-height:auto}
+  .scroll-sticky{position:relative;top:auto;height:320px;margin-bottom:24px}
+  .scroll-steps{padding:0}
+  .hero-actions{flex-direction:column;align-items:flex-start}
+}
+
+/* ════════════════════════════════════════════
+   REDUCED MOTION
+   ════════════════════════════════════════════ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+  .rv{opacity:1;transform:none}
+  .code-line{opacity:1;transform:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- NAV -->
+  <nav role="navigation" aria-label="Main navigation">
+    <div class="nav-in">
+      <a href="#" class="nav-logo" aria-label="Math Recall home">Math<span>Recall</span></a>
+      <ul class="nav-links">
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#about">About</a></li>
+      </ul>
+      <a href="#download" class="nav-cta">Download</a>
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='false');this.closest('nav').classList.toggle('open')">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main id="main">
+
+    <!-- ═══ HERO (v2 layout + v1 pill badge) ═══ -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="wrap">
+        <span class="hero-badge rv" aria-label="Accessibility tool for macOS">Accessibility for macOS</span>
+        <h1 id="hero-heading" class="rv d1">Reach into<br>equations<span class="accent">.</span></h1>
+        <p class="hero-sub rv d2">The first tool that lets screen reader users structurally navigate mathematical expressions. Not linearly. Structurally. Navigate any part. Extract any sub-expression. Never leave your editor.</p>
+        <div class="hero-actions rv d3">
+          <a href="#download" class="btn-primary">Download for macOS</a>
+          <a href="#how-it-works" class="btn-secondary">See how it works</a>
+        </div>
+        <div class="hero-note rv d4"><span class="pulse" aria-hidden="true"></span> Swift &middot; macOS 15.2+ &middot; VoiceOver-native &middot; MIT License</div>
+
+        <!-- Terminal demo -->
+        <div class="terminal rv d4" role="region" aria-label="Demo: navigating an equation with Math Recall">
+          <div class="terminal-bar" aria-hidden="true">
+            <div class="terminal-dot r"></div>
+            <div class="terminal-dot y"></div>
+            <div class="terminal-dot g"></div>
+            <span class="terminal-title">math-recall — recall mode</span>
+          </div>
+          <div class="terminal-body" id="termDemo">
+            <div class="code-line" data-delay="0"><span class="dim">// Input captured from Notes.app via Accessibility API</span></div>
+            <div class="code-line" data-delay="200"><span class="cmd">equation:</span> <span class="hl">x^2 + 3x + 5 = 20</span></div>
+            <div class="code-line" data-delay="500"><span class="dim">&nbsp;</span></div>
+            <div class="code-line" data-delay="700"><span class="dim">// Tree built. Entering recall mode...</span></div>
+            <div class="code-line" data-delay="1000"><span class="cmd">press</span> <span class="hl">1</span>   <span class="speech">&rarr; "Line 1, equation"</span></div>
+            <div class="code-line" data-delay="1300"><span class="cmd">press</span> <span class="hl">L</span>   <span class="speech">&rarr; "Left side, 3 items"</span></div>
+            <div class="code-line" data-delay="1600"><span class="cmd">press</span> <span class="hl">1</span>   <span class="speech">&rarr; "x squared"</span></div>
+            <div class="code-line" data-delay="2000"><span class="dim">&nbsp;</span></div>
+            <div class="code-line" data-delay="2200"><span class="cmd">press</span> <span class="hl">Space</span>  <span class="ok">&rarr; x^2 inserted at cursor</span></div>
+            <div class="code-line" data-delay="2600"><span class="dim">&nbsp;</span></div>
+            <div class="code-line" data-delay="2800"><span class="dim">// 3 keystrokes. Exact sub-expression. Zero vision required.</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ═══ SCROLLYTELLING — How It Works (from v2) ═══ -->
+    <div class="scroll-section" id="how-it-works" role="region" aria-label="How Math Recall works, step by step">
+      <div class="wrap">
+        <div class="sec-label rv">How it works</div>
+        <h2 class="rv d1" style="margin-bottom:56px">From flat audio<br>to structural navigation<span class="accent">.</span></h2>
+
+        <div class="scroll-layout">
+          <!-- Sticky visual panel -->
+          <div class="scroll-sticky">
+            <div class="scroll-sticky-inner" id="scrollViz" aria-hidden="true">
+
+              <!-- Layer 1: Flat audio — the problem -->
+              <div class="viz-layer visible" id="vizLayer1">
+                <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="480" height="480" fill="#0d0f14"/>
+                  <text x="240" y="100" text-anchor="middle" font-size="48" opacity=".6">&#128266;</text>
+                  <text x="240" y="170" text-anchor="middle" font-family="monospace" font-size="20" fill="#e4e8f0">x&#178; + 3x + 5 = 20</text>
+                  <line x1="60" y1="200" x2="420" y2="200" stroke="#4a7cec" stroke-width="2" stroke-dasharray="8 4" opacity=".4">
+                    <animate attributeName="stroke-dashoffset" from="0" to="-24" dur="1.5s" repeatCount="indefinite"/>
+                  </line>
+                  <polygon points="415,194 430,200 415,206" fill="#4a7cec" opacity=".4"/>
+                  <g transform="translate(60, 240)">
+                    <rect x="0" y="10" width="6" height="30" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="30;10;30" dur="1.5s" repeatCount="indefinite"/><animate attributeName="y" values="10;20;10" dur="1.5s" repeatCount="indefinite"/></rect>
+                    <rect x="18" y="4" width="6" height="42" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="42;14;42" dur="1.8s" repeatCount="indefinite" begin=".1s"/><animate attributeName="y" values="4;18;4" dur="1.8s" repeatCount="indefinite" begin=".1s"/></rect>
+                    <rect x="36" y="12" width="6" height="26" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="26;8;26" dur="1.3s" repeatCount="indefinite" begin=".2s"/><animate attributeName="y" values="12;21;12" dur="1.3s" repeatCount="indefinite" begin=".2s"/></rect>
+                    <rect x="54" y="0" width="6" height="50" fill="#4a7cec" opacity=".6" rx="2"><animate attributeName="height" values="50;18;50" dur="2s" repeatCount="indefinite" begin=".3s"/><animate attributeName="y" values="0;16;0" dur="2s" repeatCount="indefinite" begin=".3s"/></rect>
+                    <rect x="72" y="6" width="6" height="38" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="38;12;38" dur="1.6s" repeatCount="indefinite" begin=".15s"/><animate attributeName="y" values="6;19;6" dur="1.6s" repeatCount="indefinite" begin=".15s"/></rect>
+                    <rect x="90" y="14" width="6" height="22" fill="#4a7cec" opacity=".4" rx="2"><animate attributeName="height" values="22;6;22" dur="1.4s" repeatCount="indefinite" begin=".25s"/><animate attributeName="y" values="14;22;14" dur="1.4s" repeatCount="indefinite" begin=".25s"/></rect>
+                    <rect x="108" y="2" width="6" height="46" fill="#4a7cec" opacity=".6" rx="2"><animate attributeName="height" values="46;16;46" dur="1.9s" repeatCount="indefinite" begin=".05s"/><animate attributeName="y" values="2;17;2" dur="1.9s" repeatCount="indefinite" begin=".05s"/></rect>
+                    <rect x="126" y="8" width="6" height="34" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="34;10;34" dur="1.7s" repeatCount="indefinite" begin=".35s"/><animate attributeName="y" values="8;20;8" dur="1.7s" repeatCount="indefinite" begin=".35s"/></rect>
+                    <rect x="144" y="12" width="6" height="26" fill="#4a7cec" opacity=".4" rx="2"><animate attributeName="height" values="26;8;26" dur="1.5s" repeatCount="indefinite" begin=".4s"/><animate attributeName="y" values="12;21;12" dur="1.5s" repeatCount="indefinite" begin=".4s"/></rect>
+                    <rect x="162" y="0" width="6" height="50" fill="#4a7cec" opacity=".6" rx="2"><animate attributeName="height" values="50;20;50" dur="2.1s" repeatCount="indefinite" begin=".12s"/><animate attributeName="y" values="0;15;0" dur="2.1s" repeatCount="indefinite" begin=".12s"/></rect>
+                    <rect x="180" y="6" width="6" height="38" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="38;12;38" dur="1.6s" repeatCount="indefinite" begin=".22s"/><animate attributeName="y" values="6;19;6" dur="1.6s" repeatCount="indefinite" begin=".22s"/></rect>
+                    <rect x="198" y="10" width="6" height="30" fill="#4a7cec" opacity=".45" rx="2"><animate attributeName="height" values="30;10;30" dur="1.4s" repeatCount="indefinite" begin=".32s"/><animate attributeName="y" values="10;20;10" dur="1.4s" repeatCount="indefinite" begin=".32s"/></rect>
+                    <rect x="216" y="4" width="6" height="42" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="42;16;42" dur="1.8s" repeatCount="indefinite" begin=".08s"/><animate attributeName="y" values="4;17;4" dur="1.8s" repeatCount="indefinite" begin=".08s"/></rect>
+                    <rect x="234" y="12" width="6" height="26" fill="#4a7cec" opacity=".4" rx="2"><animate attributeName="height" values="26;8;26" dur="1.3s" repeatCount="indefinite" begin=".28s"/><animate attributeName="y" values="12;21;12" dur="1.3s" repeatCount="indefinite" begin=".28s"/></rect>
+                    <rect x="252" y="2" width="6" height="46" fill="#4a7cec" opacity=".55" rx="2"><animate attributeName="height" values="46;16;46" dur="1.9s" repeatCount="indefinite" begin=".18s"/><animate attributeName="y" values="2;17;2" dur="1.9s" repeatCount="indefinite" begin=".18s"/></rect>
+                    <rect x="270" y="8" width="6" height="34" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="34;10;34" dur="1.7s" repeatCount="indefinite" begin=".38s"/><animate attributeName="y" values="8;20;8" dur="1.7s" repeatCount="indefinite" begin=".38s"/></rect>
+                    <rect x="288" y="14" width="6" height="22" fill="#4a7cec" opacity=".4" rx="2"><animate attributeName="height" values="22;6;22" dur="1.4s" repeatCount="indefinite" begin=".42s"/><animate attributeName="y" values="14;22;14" dur="1.4s" repeatCount="indefinite" begin=".42s"/></rect>
+                    <rect x="306" y="6" width="6" height="38" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="38;12;38" dur="1.6s" repeatCount="indefinite" begin=".14s"/><animate attributeName="y" values="6;19;6" dur="1.6s" repeatCount="indefinite" begin=".14s"/></rect>
+                    <rect x="324" y="10" width="6" height="30" fill="#4a7cec" opacity=".45" rx="2"><animate attributeName="height" values="30;10;30" dur="1.5s" repeatCount="indefinite" begin=".34s"/><animate attributeName="y" values="10;20;10" dur="1.5s" repeatCount="indefinite" begin=".34s"/></rect>
+                    <rect x="342" y="4" width="6" height="42" fill="#4a7cec" opacity=".5" rx="2"><animate attributeName="height" values="42;14;42" dur="1.8s" repeatCount="indefinite" begin=".24s"/><animate attributeName="y" values="4;18;4" dur="1.8s" repeatCount="indefinite" begin=".24s"/></rect>
+                  </g>
+                  <rect x="60" y="340" width="360" height="36" rx="10" fill="rgba(74,124,236,.08)" stroke="rgba(74,124,236,.12)" stroke-width="1"/>
+                  <text x="240" y="363" text-anchor="middle" font-family="monospace" font-size="13" fill="#9ba2b4" font-style="italic">"x squared plus 3 x plus 5 equals 20"</text>
+                  <rect x="0" y="440" width="480" height="40" fill="#12151c" rx="0"/>
+                  <text x="20" y="464" font-family="monospace" font-size="10" fill="#dc2626" letter-spacing=".06em">NO STRUCTURE</text>
+                  <text x="200" y="464" font-family="monospace" font-size="10" fill="#5c6274">LINEAR AUDIO — CAN'T SELECT PARTS</text>
+                </svg>
+              </div>
+
+              <!-- Layer 2: Parse — tree structure emerges -->
+              <div class="viz-layer hidden" id="vizLayer2">
+                <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="480" height="480" fill="#0d0f14"/>
+                  <text x="240" y="36" text-anchor="middle" font-family="monospace" font-size="11" fill="#9ba2b4">x&#178; + 3x + 5 = 20</text>
+                  <path d="M240 44 L240 68" stroke="#4a7cec" stroke-width="1.5" stroke-dasharray="4 3">
+                    <animate attributeName="stroke-dashoffset" from="0" to="-14" dur="1s" repeatCount="indefinite"/>
+                  </path>
+                  <rect x="190" y="70" width="100" height="36" rx="8" fill="#1a1e28" stroke="#4a7cec" stroke-width="2"/>
+                  <text x="240" y="93" text-anchor="middle" font-family="monospace" font-size="14" fill="#4a7cec" font-weight="bold">EQ ( = )</text>
+                  <path d="M220 106 L130 156" stroke="#4a7cec" stroke-width="1.5" opacity=".6" stroke-dasharray="100">
+                    <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.5s" repeatCount="indefinite"/>
+                  </path>
+                  <path d="M260 106 L350 156" stroke="#4a7cec" stroke-width="1.5" opacity=".6" stroke-dasharray="100">
+                    <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.5s" repeatCount="indefinite" begin=".3s"/>
+                  </path>
+                  <circle r="3" fill="#4a7cec" opacity=".8"><animateMotion dur="1.5s" repeatCount="indefinite" path="M220 106 L130 156"/></circle>
+                  <circle r="3" fill="#4a7cec" opacity=".6"><animateMotion dur="1.5s" repeatCount="indefinite" path="M260 106 L350 156" begin=".6s"/></circle>
+                  <rect x="72" y="158" width="116" height="36" rx="8" fill="#1a1e28" stroke="#4a7cec" stroke-width="1.5"/>
+                  <text x="130" y="181" text-anchor="middle" font-family="monospace" font-size="12" fill="#e4e8f0">LEFT SIDE</text>
+                  <rect x="292" y="158" width="116" height="36" rx="8" fill="#1a1e28" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+                  <text x="350" y="181" text-anchor="middle" font-family="monospace" font-size="12" fill="#9ba2b4">RIGHT SIDE</text>
+                  <path d="M110 194 L70 250" stroke="#4a7cec" stroke-width="1" opacity=".4" stroke-dasharray="80">
+                    <animate attributeName="stroke-dashoffset" from="80" to="0" dur="2s" repeatCount="indefinite"/>
+                  </path>
+                  <path d="M130 194 L130 250" stroke="#4a7cec" stroke-width="1" opacity=".4" stroke-dasharray="80">
+                    <animate attributeName="stroke-dashoffset" from="80" to="0" dur="2s" repeatCount="indefinite" begin=".2s"/>
+                  </path>
+                  <path d="M150 194 L190 250" stroke="#4a7cec" stroke-width="1" opacity=".4" stroke-dasharray="80">
+                    <animate attributeName="stroke-dashoffset" from="80" to="0" dur="2s" repeatCount="indefinite" begin=".4s"/>
+                  </path>
+                  <rect x="34" y="252" width="72" height="32" rx="6" fill="#1a1e28" stroke="#4a7cec" stroke-width="1.5"/>
+                  <text x="70" y="273" text-anchor="middle" font-family="monospace" font-size="15" fill="#4a7cec" font-weight="bold">x&#178;</text>
+                  <rect x="94" y="252" width="72" height="32" rx="6" fill="#1a1e28" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+                  <text x="130" y="273" text-anchor="middle" font-family="monospace" font-size="14" fill="#9ba2b4">3x</text>
+                  <rect x="154" y="252" width="72" height="32" rx="6" fill="#1a1e28" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+                  <text x="190" y="273" text-anchor="middle" font-family="monospace" font-size="14" fill="#9ba2b4">5</text>
+                  <path d="M350 194 L350 250" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+                  <rect x="314" y="252" width="72" height="32" rx="6" fill="#1a1e28" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+                  <text x="350" y="273" text-anchor="middle" font-family="monospace" font-size="14" fill="#9ba2b4">20</text>
+                  <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+                  <text x="20" y="464" font-family="monospace" font-size="10" fill="#4a7cec" letter-spacing=".06em">PARSING: 7 TOKENS &rarr; 6 NODES &rarr; 1 AST</text>
+                  <text x="420" y="464" font-family="monospace" font-size="10" fill="#16a34a">READY</text>
+                </svg>
+              </div>
+
+              <!-- Layer 3: Navigate — drilling into the tree -->
+              <div class="viz-layer hidden" id="vizLayer3">
+                <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="480" height="480" fill="#0d0f14"/>
+                  <path d="M240 80 L130 146 L70 230" stroke="#4a7cec" stroke-width="4" stroke-linecap="round" fill="none" opacity=".2" stroke-dasharray="10 6">
+                    <animate attributeName="stroke-dashoffset" from="0" to="-32" dur="1.5s" repeatCount="indefinite"/>
+                  </path>
+                  <rect x="195" y="50" width="90" height="32" rx="8" fill="#1a1e28" stroke="#4a7cec" stroke-width="2"/>
+                  <text x="240" y="71" text-anchor="middle" font-family="monospace" font-size="13" fill="#4a7cec">EQ</text>
+                  <path d="M225 82 L130 130" stroke="#4a7cec" stroke-width="1.5" opacity=".6"/>
+                  <path d="M255 82 L340 130" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+                  <rect x="72" y="130" width="116" height="34" rx="8" fill="#1a1e28" stroke="#4a7cec" stroke-width="2"/>
+                  <text x="130" y="152" text-anchor="middle" font-family="monospace" font-size="12" fill="#4a7cec">LEFT SIDE</text>
+                  <rect x="192" y="132" width="100" height="26" rx="8" fill="rgba(74,124,236,.12)" stroke="rgba(74,124,236,.2)" stroke-width="1">
+                    <animate attributeName="opacity" values=".7;1;.7" dur="3s" repeatCount="indefinite"/>
+                  </rect>
+                  <text x="242" y="150" text-anchor="middle" font-family="monospace" font-size="11" fill="#4a7cec">"3 items"</text>
+                  <rect x="292" y="130" width="100" height="34" rx="8" fill="#1a1e28" stroke="rgba(255,255,255,.06)" stroke-width="1" opacity=".25"/>
+                  <text x="342" y="152" text-anchor="middle" font-family="monospace" font-size="11" fill="#5c6274">RIGHT</text>
+                  <path d="M110 164 L70 216" stroke="#4a7cec" stroke-width="1.5" opacity=".5"/>
+                  <path d="M130 164 L130 216" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+                  <path d="M150 164 L190 216" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+                  <circle cx="70" cy="234" r="28" fill="#4a7cec" opacity=".08">
+                    <animate attributeName="r" values="28;38;28" dur="2.5s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values=".06;.16;.06" dur="2.5s" repeatCount="indefinite"/>
+                  </circle>
+                  <rect x="30" y="218" width="80" height="36" rx="8" fill="#1a1e28" stroke="#4a7cec" stroke-width="3"/>
+                  <text x="70" y="241" text-anchor="middle" font-family="monospace" font-size="18" fill="#4a7cec" font-weight="bold">x&#178;</text>
+                  <rect x="116" y="220" width="130" height="26" rx="8" fill="rgba(74,124,236,.12)" stroke="rgba(74,124,236,.2)" stroke-width="1"/>
+                  <text x="181" y="238" text-anchor="middle" font-family="monospace" font-size="12" fill="#4a7cec">"x squared"</text>
+                  <rect x="96" y="218" width="68" height="32" rx="6" fill="#1a1e28" stroke="rgba(255,255,255,.06)" stroke-width="1" opacity=".2"/>
+                  <text x="130" y="239" text-anchor="middle" font-family="monospace" font-size="12" fill="#5c6274">3x</text>
+                  <rect x="156" y="218" width="68" height="32" rx="6" fill="#1a1e28" stroke="rgba(255,255,255,.06)" stroke-width="1" opacity=".2"/>
+                  <text x="190" y="239" text-anchor="middle" font-family="monospace" font-size="12" fill="#5c6274">5</text>
+                  <rect x="280" y="210" width="180" height="160" rx="10" fill="#1a1e28" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
+                  <text x="296" y="234" font-family="monospace" font-size="10" fill="#5c6274" letter-spacing=".06em">KEYSTROKES</text>
+                  <rect x="296" y="248" width="32" height="32" rx="6" fill="rgba(74,124,236,.1)" stroke="#4a7cec" stroke-width="1"/>
+                  <text x="312" y="269" text-anchor="middle" font-family="monospace" font-size="16" fill="#4a7cec">1</text>
+                  <text x="338" y="269" font-family="monospace" font-size="11" fill="#9ba2b4">"Line 1"</text>
+                  <rect x="296" y="290" width="32" height="32" rx="6" fill="rgba(74,124,236,.1)" stroke="#4a7cec" stroke-width="1"/>
+                  <text x="312" y="311" text-anchor="middle" font-family="monospace" font-size="16" fill="#4a7cec">L</text>
+                  <text x="338" y="311" font-family="monospace" font-size="11" fill="#9ba2b4">"Left, 3 items"</text>
+                  <rect x="296" y="332" width="32" height="32" rx="6" fill="rgba(74,124,236,.15)" stroke="#4a7cec" stroke-width="2">
+                    <animate attributeName="stroke-width" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+                  </rect>
+                  <text x="312" y="353" text-anchor="middle" font-family="monospace" font-size="16" fill="#4a7cec" font-weight="bold">1</text>
+                  <text x="338" y="353" font-family="monospace" font-size="11" fill="#4a7cec" font-weight="bold">"x squared"</text>
+                  <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+                  <circle cx="20" cy="460" r="4" fill="#16a34a"><animate attributeName="opacity" values="1;.3;1" dur="2s" repeatCount="indefinite"/></circle>
+                  <text x="34" y="464" font-family="monospace" font-size="10" fill="#9ba2b4">RECALL</text>
+                  <text x="110" y="464" font-family="monospace" font-size="10" fill="#4a7cec">SELECTED: x&#178;</text>
+                  <text x="290" y="464" font-family="monospace" font-size="10" fill="#5c6274">PATH: 1.L.1 &middot; DEPTH 3</text>
+                </svg>
+              </div>
+
+              <!-- Layer 4: Extract — node inserted into document -->
+              <div class="viz-layer hidden" id="vizLayer4">
+                <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="480" height="480" fill="#0d0f14"/>
+                  <circle cx="240" cy="120" r="70" fill="#4a7cec" opacity=".05">
+                    <animate attributeName="r" values="70;90;70" dur="3s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values=".03;.1;.03" dur="3s" repeatCount="indefinite"/>
+                  </circle>
+                  <rect x="170" y="80" width="140" height="64" rx="12" fill="#1a1e28" stroke="#4a7cec" stroke-width="3">
+                    <animate attributeName="stroke-width" values="3;4;3" dur="2s" repeatCount="indefinite"/>
+                  </rect>
+                  <text x="240" y="120" text-anchor="middle" font-family="monospace" font-size="32" fill="#4a7cec" font-weight="bold">x&#178;</text>
+                  <path d="M240 148 L240 220" stroke="#4a7cec" stroke-width="2.5" stroke-dasharray="8 5">
+                    <animate attributeName="stroke-dashoffset" from="0" to="-26" dur="1s" repeatCount="indefinite"/>
+                  </path>
+                  <polygon points="232,216 248,216 240,232" fill="#4a7cec" opacity=".8"/>
+                  <rect x="80" y="240" width="320" height="150" rx="10" fill="#1a1e28" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+                  <rect x="80" y="240" width="320" height="28" rx="10" fill="#1e222c"/>
+                  <circle cx="100" cy="254" r="5" fill="#ff5f57"/>
+                  <circle cx="118" cy="254" r="5" fill="#febc2e"/>
+                  <circle cx="136" cy="254" r="5" fill="#28c840"/>
+                  <text x="240" y="258" text-anchor="middle" font-family="monospace" font-size="10" fill="#5c6274">Notes.app — homework.txt</text>
+                  <text x="100" y="292" font-family="monospace" font-size="12" fill="#9ba2b4">The integrand is:</text>
+                  <text x="100" y="318" font-family="monospace" font-size="18" fill="#4a7cec" font-weight="bold">x^2</text>
+                  <rect x="140" y="304" width="2" height="20" fill="#4a7cec">
+                    <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+                  </rect>
+                  <text x="100" y="348" font-family="monospace" font-size="12" fill="#5c6274">which we evaluate from 0 to 1</text>
+                  <text x="100" y="372" font-family="monospace" font-size="12" fill="#5c6274">giving us a result of 1/3.</text>
+                  <rect x="0" y="440" width="480" height="40" fill="#12151c"/>
+                  <circle cx="20" cy="460" r="4" fill="#16a34a"/>
+                  <text x="34" y="464" font-family="monospace" font-size="10" fill="#16a34a" letter-spacing=".04em">INSERTED</text>
+                  <text x="130" y="464" font-family="monospace" font-size="10" fill="#9ba2b4">x^2 &rarr; cursor in Notes.app</text>
+                  <text x="370" y="464" font-family="monospace" font-size="10" fill="#5c6274">0 VISION</text>
+                </svg>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Scroll steps (text column) -->
+          <div class="scroll-steps">
+            <div class="scroll-step active" data-step="0">
+              <div class="scroll-step-num">01 — The problem</div>
+              <h3>Equations are walls, not windows</h3>
+              <p>A sighted student glances at <em>x&sup2; + 3x + 5 = 20</em> and instantly isolates the first term. A blind student hears the entire expression read aloud — start to finish, every time. For multi-step equations with dozens of terms, that means re-listening to everything just to find one piece. There's no way to jump ahead, no way to grab a sub-expression, and no way to insert it into your own work.</p>
+              <div class="step-key">LINEAR &middot; NO STRUCTURE &middot; NO SELECTION</div>
+            </div>
+            <div class="scroll-step" data-step="1">
+              <div class="scroll-step-num">02 — The capture</div>
+              <h3>Math Recall reads what you're working on</h3>
+              <p>Copy an equation from your textbook, editor, or browser — or let Math Recall capture it directly from the focused app using macOS Accessibility APIs. Either way, the equation is instantly parsed into a tree structure you can navigate. Any equation that was flat audio is now explorable in as few as three keystrokes.</p>
+              <div class="step-key">CLIPBOARD OR ACCESSIBILITY API &rarr; NAVIGABLE TREE</div>
+            </div>
+            <div class="scroll-step" data-step="2">
+              <div class="scroll-step-num">03 — The navigation</div>
+              <h3>A simple grammar: line, side, term</h3>
+              <p>Math Recall uses a consistent three-level grammar. Press a <strong>number</strong> to pick a line. Press <strong>L</strong> or <strong>R</strong> to choose a side of the equation. Press another <strong>number</strong> to select a term. At every step, VoiceOver announces where you are: "Left side, 3 items" &rarr; "x squared." You always know your position. You never lose your place.</p>
+              <div class="step-key">NUMBER &rarr; SIDE &rarr; NUMBER &middot; SPOKEN AT EVERY STEP</div>
+            </div>
+            <div class="scroll-step" data-step="3">
+              <div class="scroll-step-num">04 — The extraction</div>
+              <h3>Space. Inserted. Done.</h3>
+              <p>Press Space. The selected node is serialized back to plain text — <strong>x^2</strong> — and inserted at your cursor in Notes.app. You never left your text editor. You never touched the clipboard. The entire interaction was non-visual, structural, and took under two seconds.</p>
+              <div class="step-key">x^2 &rarr; CURSOR &middot; ZERO VISION REQUIRED</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ WHAT IT PARSES (from v2) ═══ -->
+    <div class="sec" id="features" style="border-bottom:1px solid var(--border)">
+      <div class="wrap">
+        <div class="sec-label rv">What it parses</div>
+        <h2 class="rv">Calculus-level math<span class="accent">.</span><br>From plain text<span class="accent">.</span></h2>
+        <p class="desc rv d1">No LaTeX required. No MathML. Math Recall accepts the kind of math notation people actually type. Because the people who need this tool shouldn't have to learn a second notation system to study the subject they already understand.</p>
+
+        <div class="features-grid">
+          <div class="feature rv">
+            <div class="feature-label">Expressions</div>
+            <h3>Equations, powers, fractions</h3>
+            <p>Full operator precedence handling, implicit multiplication, multi-line equation support with tolerant parsing.</p>
+            <div class="feature-code">x^2 + 3x = 7 &nbsp;&bull;&nbsp; (x+1)/(x-1) &nbsp;&bull;&nbsp; 3x &rarr; 3*x</div>
+          </div>
+          <div class="feature rv d1">
+            <div class="feature-label">Calculus</div>
+            <h3>Integrals, derivatives, limits</h3>
+            <p>Definite and indefinite integrals, derivative notation, limit expressions with approach syntax.</p>
+            <div class="feature-code">int_0^1 x^2 dx &nbsp;&bull;&nbsp; d/dx &nbsp;&bull;&nbsp; lim_x-&gt;0</div>
+          </div>
+          <div class="feature rv d2">
+            <div class="feature-label">Functions</div>
+            <h3>Trig, logarithms, roots</h3>
+            <p>sin, cos, tan, ln, log, square roots, nth roots. All parsed into navigable tree nodes.</p>
+            <div class="feature-code">sin(x) &nbsp;&bull;&nbsp; ln(e^x) &nbsp;&bull;&nbsp; sqrt(x) &nbsp;&bull;&nbsp; root3(8)</div>
+          </div>
+          <div class="feature rv d3">
+            <div class="feature-label">Resilience</div>
+            <h3>Error-tolerant by design</h3>
+            <p>Skips non-math lines. Preserves last valid path on error. 400ms multi-digit input buffering. Never drops you out of recall mode.</p>
+            <div class="feature-code">// When your user can't see the screen, you don't crash.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ARCHITECTURE (from v2) ═══ -->
+    <div class="sec arch-section" id="architecture" style="border-bottom:1px solid var(--border)">
+      <div class="wrap">
+        <div class="sec-label rv">Architecture</div>
+        <h2 class="rv">Five layers<span class="accent">.</span> Each<br>independently testable<span class="accent">.</span></h2>
+        <p class="desc rv d1">A deliberate pipeline, not a monolith. Every component can be run and verified in isolation through the CLI test harness.</p>
+
+        <div class="arch-grid">
+          <div class="arch-diagram rv" role="img" aria-label="Architecture diagram showing five layers: Input, Parser, Navigation Engine, Speech Controller, Serializer">
+<span class="layer">Input Layer</span>
+  <span class="component">  FocusedTextReader</span>  <span class="note">// AXUIElement APIs</span>
+  <span class="component">  ClipboardMonitor</span>   <span class="note">// Fallback capture</span>
+
+<span class="layer">Parser</span>
+  <span class="component">  Tokenizer</span>          <span class="note">// Plain text &rarr; tokens</span>
+  <span class="component">  Parser</span>             <span class="note">// Tokens &rarr; MathNode AST</span>
+
+<span class="layer">Navigation Engine</span>
+  <span class="component">  RecallNavigator</span>    <span class="note">// Tree traversal + state</span>
+
+<span class="layer">Speech Controller</span>
+  <span class="component">  SpeechController</span>   <span class="note">// NSAccessibility announce</span>
+
+<span class="layer">Serializer</span>
+  <span class="component">  NodeSerializer</span>     <span class="note">// MathNode &rarr; plain text</span></div>
+
+          <div class="arch-specs rv d1">
+            <div class="spec-row"><span class="spec-key">Language</span><span class="spec-val">Swift</span></div>
+            <div class="spec-row"><span class="spec-key">Platform</span><span class="spec-val">macOS 15.2+</span></div>
+            <div class="spec-row"><span class="spec-key">UI Framework</span><span class="spec-val">SwiftUI</span></div>
+            <div class="spec-row"><span class="spec-key">Global Hotkeys</span><span class="spec-val">Carbon API</span></div>
+            <div class="spec-row"><span class="spec-key">Text Capture</span><span class="spec-val">AXUIElement</span></div>
+            <div class="spec-row"><span class="spec-key">Speech</span><span class="spec-val">NSAccessibility</span></div>
+            <div class="spec-row"><span class="spec-key">Tests</span><span class="spec-val">42+ across 4 suites</span></div>
+            <div class="spec-row"><span class="spec-key">License</span><span class="spec-val">MIT</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ABOUT ═══ -->
+    <div class="sec" id="about" style="border-bottom:1px solid var(--border)">
+      <div class="wrap">
+        <div class="sec-label rv">About</div>
+        <h2 class="rv">Born from research<span class="accent">.</span><br>Built at the University of Washington<span class="accent">.</span></h2>
+        <p class="desc rv d1">Math Recall started as <em>We Are All Blind</em> — an accessibility research project in HCDE 515 where we co-designed with a blind computer science student to understand how he actually experiences math. The finding was clear: the barrier isn't comprehension. It's memory.</p>
+
+        <div class="about-badges rv d1">
+          <img src="uw-badge.png" alt="University of Washington seal">
+          <img src="hcde-badge.png" alt="Human Centered Design & Engineering">
+        </div>
+
+        <div class="about-quote rv d2">
+          <blockquote>&ldquo;If a human scribe is a 10, this tool is like a 9 or 9.5.&rdquo;</blockquote>
+          <cite>— Abdallah Altahaineh, design partner, after testing the prototype</cite>
+        </div>
+
+        <div style="margin-top:40px" class="rv d2">
+          <a href="case-study.html" class="btn-case-study">Read the full case study &#8599;</a>
+        </div>
+
+        <div class="about-grid">
+          <div class="roadmap rv d2" role="list" aria-label="Project roadmap">
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">Phase 1 — Core parsing, navigation, serialization, speech</span>
+              <span class="roadmap-status done" aria-label="Complete">Complete</span>
+            </div>
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">Phase 2 — macOS integration, screen reader capture via AXUIElement</span>
+              <span class="roadmap-status done" aria-label="Complete">Complete</span>
+            </div>
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">Phase 3 — Floating panel UI, reading mode, VoiceOver polish</span>
+              <span class="roadmap-status active" aria-label="In progress">In Progress</span>
+            </div>
+            <div class="roadmap-item" role="listitem">
+              <span class="roadmap-name">v2 — Matrices, piecewise functions, summation/product notation</span>
+              <span class="roadmap-status planned" aria-label="Planned">Future</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NATIVE MAC APP (from v1) ═══ -->
+    <section class="sec native-section" aria-labelledby="native-heading">
+      <div class="wrap">
+        <div class="sec-label rv">Native Mac App</div>
+        <h2 id="native-heading" class="rv d1">Built with Swift<span class="accent">.</span><br>Runs on your Mac<span class="accent">.</span></h2>
+        <p class="native-desc rv d2">No Electron. No browser. A native macOS app that starts instantly, uses minimal resources, and respects your system accessibility settings.</p>
+        <div class="native-badges">
+          <div class="badge rv" role="img" aria-label="Requires macOS 15.2 or later"><span aria-hidden="true">&#63743;</span> macOS 15.2+</div>
+          <div class="badge rv d1" role="img" aria-label="Built with Swift and SwiftUI"><span aria-hidden="true">&#9883;</span> Swift &amp; SwiftUI</div>
+          <div class="badge rv d2" role="img" aria-label="VoiceOver ready"><span aria-hidden="true">&#128065;</span> VoiceOver Ready</div>
+          <div class="badge rv d3" role="img" aria-label="100 percent local processing"><span aria-hidden="true">&#128274;</span> 100% Local</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CTA (from v1) ═══ -->
+    <section class="cta-section" id="download" aria-labelledby="cta-heading">
+      <div class="wrap">
+        <div class="sec-label rv">Get Started</div>
+        <h2 id="cta-heading" class="rv d1">Navigate math<br>on your terms<span class="accent">.</span></h2>
+        <p class="cta-desc rv d2">Download Math Recall and start working with equations the way you think about them — as a structure you can explore, not a sentence you have to sit through.</p>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap" class="rv d3">
+          <a href="#" class="btn-primary">Download for macOS</a>
+        </div>
+        <div class="hero-note rv d4" style="justify-content:center;margin-top:16px">Free during beta &middot; macOS 15.2+ &middot; Apple Silicon &amp; Intel</div>
+      </div>
+    </section>
+
+    <!-- A11Y NOTICE -->
+    <div style="padding:0 40px;border:none" class="rv">
+      <div class="a11y-notice" role="note" aria-label="Accessibility statement">
+        <svg class="a11y-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor" stroke="none"/><path d="M9.5 10h5M12 10v4"/><path d="M9 17l1.5-3h3L15 17"/></svg>
+        <p>This page and the Math Recall application are designed to meet WCAG 2.1 AA accessibility standards. If you encounter any accessibility issues, please <a href="mailto:asim.g.sayed@gmail.com" style="color:var(--blue);text-decoration:underline">contact us</a>.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER (from v1) -->
+  <footer role="contentinfo">
+    <div class="wrap">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo" aria-label="Math Recall home">Math<span>Recall</span></a>
+          <p>Tree-based equation navigation for blind and visually impaired users. A native macOS accessibility tool.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#download">Download</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#">Documentation</a></li>
+            <li><a href="#">Changelog</a></li>
+            <li><a href="#">Accessibility Statement</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Contact</h4>
+          <ul>
+            <li><a href="mailto:asim.g.sayed@gmail.com">Email</a></li>
+            <li><a href="https://github.com/AsimSayed/symbolic-state-recall" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 Math Recall. University of Washington HCDE. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script>
+  // Code typing animation
+  function animateCode(id) {
+    const block = document.getElementById(id);
+    if (!block) return;
+    const lines = block.querySelectorAll('.code-line');
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          lines.forEach(line => {
+            const delay = parseInt(line.dataset.delay) || 0;
+            setTimeout(() => line.classList.add('typed'), delay);
+          });
+          obs.unobserve(block);
+        }
+      });
+    }, { threshold: 0.2 });
+    obs.observe(block);
+  }
+  animateCode('termDemo');
+
+  // Scroll reveal with bounce
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('vis');
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.rv').forEach(el => revealObs.observe(el));
+
+  // Scrollytelling
+  const scrollSteps = document.querySelectorAll('.scroll-step');
+  const vizLayers = [
+    document.getElementById('vizLayer1'),
+    document.getElementById('vizLayer2'),
+    document.getElementById('vizLayer3'),
+    document.getElementById('vizLayer4')
+  ];
+
+  function updateScrollytelling() {
+    let activeIndex = 0;
+    scrollSteps.forEach((step, i) => {
+      const rect = step.getBoundingClientRect();
+      const viewCenter = window.innerHeight * 0.5;
+      if (rect.top < viewCenter && rect.bottom > viewCenter * 0.3) {
+        activeIndex = i;
+      }
+    });
+    scrollSteps.forEach((step, i) => {
+      step.classList.toggle('active', i === activeIndex);
+    });
+    vizLayers.forEach((layer, i) => {
+      if (!layer) return;
+      if (i === activeIndex) {
+        layer.classList.remove('hidden');
+        layer.classList.add('visible');
+      } else {
+        layer.classList.add('hidden');
+        layer.classList.remove('visible');
+      }
+    });
+  }
+
+  window.addEventListener('scroll', updateScrollytelling, { passive: true });
+  updateScrollytelling();
+  </script>
+<!-- Annotate.js — visual feedback tool for AI agents (drop-in, no React) -->
+<script src="../annotate.js"></script>
+</body>
+</html>
