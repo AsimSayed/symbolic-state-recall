@@ -18,3 +18,4 @@ dist/
 
 # Claude Code
 .claude/
+.collaborator
